@@ -1,0 +1,1 @@
+!a ECONOMIC_BOOST seal at (6, 0) has no building to sit on

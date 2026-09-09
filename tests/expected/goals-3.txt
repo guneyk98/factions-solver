@@ -1,0 +1,3 @@
+ranking=in-order
+goal wood.production.market weight=1
+goal iron.production.market weight=1

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="darkreader-lock">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Village Planner</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Village Planner</h1>
+
+      <label class="field">
+        Game
+        <select id="game-select"
+          title="Which round to plan against. Changes the ground; the figures still use the newest game's rules for now."></select>
+        <select id="player-select" title="Load a village someone actually built in this round">
+          <option value="">Load a village…</option>
+        </select>
+      </label>
+
+      <label class="field" id="season-field" hidden>
+        Season
+        <select id="season-select"
+          title="Which season to price by. Every turn of the wheel takes 0.99 off the price multiplier, so pick a later one to plan ahead."></select>
+      </label>
+
+      <button type="button" id="pull-open" hidden
+        title="Read your faction's villages and everyone's bonuses out of the game itself">Fetch from game…</button>
+
+      <label class="field">
+        Village level
+        <input id="village-level" type="number" min="1" max="99" value="5">
+      </label>
+
+      <div class="field">
+        Buildings
+        <span id="building-count" class="count">0 / 0</span>
+      </div>
+
+      <span id="status" class="status" role="status"></span>
+
+      <button type="button" id="settings-open" class="settings-open" title="Settings">&#9881; Settings</button>
+
+    </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <aside class="panel sidebar">
+      <div class="view-tabs">
+        <button type="button" class="view-tab" id="view-place" data-view="place" aria-pressed="true">Place</button>
+        <button type="button" class="view-tab" id="view-solve" data-view="solve" aria-pressed="false">Rearrange</button>
+        <span class="help" id="view-help" title="">?</span>
+      </div>
+
+      <section id="place-view">
+        <div class="tier-tabs" id="tier-tabs"></div>
+        <div class="palette-grid" id="building-palette"></div>
+        <div class="palette-grid" id="terrain-palette" hidden></div>
+
+        <div class="place-bottom" id="place-bottom">
+          <label class="build-level" id="build-level-field">
+            <span>Place at level</span>
+            <input type="number" id="build-level" min="1" max="99" step="1" value="1">
+          </label>
+
+          <p class="hint rotate-hint" id="rotate-hint" hidden></p>
+          <p class="hint" id="paint-hint" hidden>Click or drag to paint.</p>
+
+          <div class="terrain-section">
+            <button type="button" id="terrain-toggle" aria-pressed="false" title="Toggle terrain editing (G)">Edit
+              terrain</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="solve-view" hidden>
+        <ol class="goal-list" id="goal-list"></ol>
+        <label class="checkbox goal-mode">
+          <input type="checkbox" id="goal-balance"> Balance them by weight
+        </label>
+        <label class="goal-reading">
+          <span>Soldiers/t means <span class="help"
+              title="Optimise base soldiers/t, or effective (atk/def) soldiers/t.">?</span></span>
+          <select id="soldier-mode"></select>
+        </label>
+        <label class="goal-reading">
+          <span>Workers/t means <span class="help"
+              title="Optimise base workers/t, or effective workers/t (age, map or project efficiency).">?</span></span>
+          <select id="worker-mode"></select>
+        </label>
+        <label class="checkbox goal-mode">
+          <input type="checkbox" id="goal-market"> Wood/t and Iron/t after market tax
+        </label>
+        <button type="button" id="solve">Find a better layout</button>
+        <div class="solve-result" id="solve-result" hidden></div>
+      </section>
+    </aside>
+
+    <section class="board">
+      <div class="board-bar">
+        <button type="button" id="undo" title="Undo (Ctrl+Z)" disabled>&#8630; Undo</button>
+        <button type="button" id="redo" title="Redo (Ctrl+Shift+Z)" disabled>&#8631; Redo</button>
+        <span class="history-step" id="history-step"></span>
+        <div class="board-bar-end">
+          <button type="button" id="clear-buildings">Clear buildings</button>
+          <button type="button" id="saves-open">Save / load…</button>
+          <button type="button" id="share-open">Export / import…</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <div class="side-column">
+      <aside class="panel inspector">
+        <p class="empty" id="insp-empty">Hover a tile.</p>
+        <div id="insp-body" hidden>
+          <div class="tile-head" id="insp-basics"></div>
+          <div class="level-editor" id="insp-level">
+            <button type="button" data-step="-1">&minus;</button>
+            <input type="number" id="tile-level" min="0" max="99" value="0">
+            <button type="button" data-step="1">+</button>
+            <span class="hint" id="level-hint">level</span>
+          </div>
+          <div class="seal-picker" id="insp-seals" hidden>
+            <span class="hint">Seal</span>
+            <div class="seal-buttons" id="seal-buttons"></div>
+            <p class="hint" id="seal-note" hidden></p>
+          </div>
+          <div id="insp-detail"></div>
+        </div>
+
+      </aside>
+    </div>
+
+
+    <aside class="panel stats">
+      <h4 class="fx-head fx-wood">Wood</h4>
+      <ul class="fx-list fx-wood">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-wood" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value wood-value"
+            id="total-wood">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-wood" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-wood">0</span></li>
+        <li><span class="fx-what">sold</span><span class="fx-value" id="market-wood"
+            title="After the market's cut">0</span></li>
+      </ul>
+
+      <h4 class="fx-head fx-iron">Iron</h4>
+      <ul class="fx-list fx-iron">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-iron" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value iron-value"
+            id="total-iron">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-iron" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-iron">0</span></li>
+        <li><span class="fx-what">sold</span><span class="fx-value" id="market-iron"
+            title="After the market's cut">0</span></li>
+      </ul>
+
+      <h4 class="fx-head fx-workers">Workers</h4>
+      <ul class="fx-list fx-workers">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-workers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value workers-value"
+            id="total-workers">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-workers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-workers">0</span></li>
+      </ul>
+      <!-- One row per worker efficiency, built from the engine's list. -->
+      <ul class="fx-list fx-workers" id="effective-workers-list"></ul>
+
+      <h4 class="fx-head fx-soldiers">Soldiers</h4>
+      <ul class="fx-list fx-soldiers">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-soldiers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value soldiers-value"
+            id="total-soldiers">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-soldiers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-soldiers">0</span></li>
+      </ul>
+      <!-- One row per combat efficiency, built from the engine's list. -->
+      <ul class="fx-list fx-soldiers" id="effective-soldiers-list"></ul>
+
+      <h4 class="fx-head fx-village">Village</h4>
+      <ul class="fx-list fx-village">
+        <li><span class="fx-what">tax</span><span class="fx-value" id="market-tax">40%</span></li>
+      </ul>
+      <!-- And one per efficiency the engine carries, likewise. -->
+      <ul class="fx-list fx-village" id="efficiency-list"></ul>
+
+      <h4 class="fx-head fx-cost">Cost</h4>
+      <ul class="fx-list fx-cost">
+        <li><span class="fx-what">wood</span><span class="fx-value wood-value" id="cost-wood">0</span></li>
+        <li><span class="fx-what">iron</span><span class="fx-value iron-value" id="cost-iron">0</span></li>
+        <li><span class="fx-what">workers</span><span class="fx-value workers-value" id="cost-workers">0</span></li>
+      </ul>
+    </aside>
+
+    <details class="panel modifiers" id="modifiers-panel">
+      <summary>
+        <h2>Game modifiers</h2>
+        <span class="hint" id="modifiers-summary">all neutral</span>
+      </summary>
+
+      <div class="modifiers-body">
+        <div class="modifier-group">
+          <h3>General
+          </h3>
+          <div class="modifier-scalars" id="modifier-scalars"></div>
+        </div>
+
+        <div class="modifier-group modifier-group-wide">
+          <h3>Per resource
+          </h3>
+          <div class="modifier-scroll">
+            <table class="modifier-table">
+              <tbody id="modifier-columns"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modifier-group">
+          <h3>Efficiency
+          </h3>
+          <div class="modifier-scroll">
+            <table class="modifier-table">
+              <tbody id="modifier-efficiency"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modifier-group">
+          <h3>Market
+          </h3>
+          <div class="modifier-scalars" id="modifier-market"></div>
+        </div>
+
+        <p class="modifiers-foot">
+          <button type="button" id="reset-modifiers">Reset all</button>
+        </p>
+      </div>
+    </details>
+  </main>
+
+  <div class="modal" id="settings-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-head">
+        <h2 id="settings-title">Settings</h2>
+        <button type="button" class="modal-close" id="settings-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <p class="hint" id="engine-note" hidden></p>
+
+      <div class="setting">
+        <div class="setting-name">Search effort
+          <span class="help"
+            title="A search reports the best it found, not the best there is. Fast is within ~2% of Normal and ~9× quicker.">?</span>
+        </div>
+        <div class="choice" id="effort-choice">
+          <button type="button" data-effort="fast" aria-pressed="false">Fast</button>
+          <button type="button" data-effort="normal" aria-pressed="true">Normal</button>
+          <button type="button" data-effort="thorough" aria-pressed="false">Thorough</button>
+          <button type="button" data-effort="custom" aria-pressed="false">Custom</button>
+        </div>
+        <div class="effort-fields" id="effort-fields">
+          <label>Restarts
+            <input type="number" id="effort-restarts" min="1" max="500" step="1">
+            <span class="hint">separate searches, best kept</span>
+          </label>
+          <label>Iterations
+            <input type="number" id="effort-iterations" min="1" max="2000000" step="1000">
+            <span class="hint">arrangements tried in each</span>
+          </label>
+          <label>Improvement passes
+            <input type="number" id="effort-improvementPasses" min="1" max="500" step="1">
+            <span class="hint">passes over every single change, after the random search</span>
+          </label>
+          <label>Budget
+            <input type="number" id="effort-budget" min="1" max="2000000000" step="100000">
+            <span class="hint">a ceiling on each restart</span>
+          </label>
+        </div>
+
+        <p class="hint" id="effort-note"></p>
+      </div>
+
+      <div class="setting">
+        <div class="setting-name">Board</div>
+        <label class="checkbox"><input type="checkbox" id="show-output" checked> Show tile output</label>
+        <p class="hint">What each tile makes and holds, written on it.</p>
+      </div>
+
+      <div class="setting">
+        <div class="setting-name">Saved data</div>
+        <div class="choice">
+          <button type="button" id="clear-storage">Clear and reload</button>
+        </div>
+        <p class="hint">Drops everything: the village, modifiers, settings, undo history
+          and every saved layout.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal" id="saves-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="saves-title">
+      <div class="modal-head">
+        <h2 id="saves-title">Saved layouts</h2>
+        <span class="help"
+          title="Kept in this browser. The board and village level only; modifiers stay as they are.">?</span>
+        <button type="button" class="modal-close" id="saves-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <form class="save-form" id="save-form">
+        <input type="text" id="save-name" maxlength="60" autocomplete="off" spellcheck="false"
+          placeholder="Name for the layout on the board">
+        <button type="submit">Save</button>
+      </form>
+
+      <ul class="save-list" id="save-list"></ul>
+      <p class="hint" id="saves-note"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="share-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <div class="modal-head">
+        <h2 id="share-title">Export and import</h2>
+        <span class="help"
+          title="The board and village level as one line of text. Modifiers only if you tick the box.">?</span>
+        <button type="button" class="modal-close" id="share-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+
+      <textarea id="share-text" rows="3" spellcheck="false" autocomplete="off"
+        placeholder="Press Export to write a layout here, or paste one in and press Import."></textarea>
+
+      <div class="share-actions">
+        <button type="button" id="share-export">Export</button>
+        <button type="button" id="share-copy">Copy</button>
+        <button type="button" id="share-import">Import</button>
+        <label class="checkbox">
+          <input type="checkbox" id="share-modifiers"> Include game modifiers
+        </label>
+      </div>
+
+      <p class="hint" id="share-note"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="pull-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card modal-wide" role="dialog" aria-modal="true" aria-labelledby="pull-title">
+      <div class="modal-head">
+        <h2 id="pull-title">Fetch from the game</h2>
+        <button type="button" class="modal-close" id="pull-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <p class="hint">Reads a village and the modifiers over it, straight from the game.</p>
+
+      <label class="field">
+        Round
+        <select id="pull-game" title="Which round to ask the game about"></select>
+      </label>
+
+      <label class="field">
+        Whose
+        <select id="pull-who" title="Whose villages the script reads">
+          <option value="you">Yours</option>
+          <option value="faction">Your whole faction</option>
+          <option value="chosen">Chosen faction members</option>
+        </select>
+      </label>
+
+      <div class="pull-members" id="pull-members" hidden>
+        <p class="hint" id="pull-members-note"></p>
+        <div class="pull-member-list" id="pull-member-list"></div>
+      </div>
+
+      <ol class="pull-steps">
+        <li>Open <a href="https://www.factions-online.com/" target="_blank" rel="noopener">factions-online.com</a> in
+          another tab and log in.</li>
+        <li>Open that tab's console (F12, then Console) and paste this in:
+          <textarea id="pull-script" rows="8" spellcheck="false" autocomplete="off" readonly></textarea>
+          <button type="button" id="pull-copy">Copy the script</button>
+        </li>
+        <li>A box appears on that page with the reply in it, ready to copy. Paste it here:
+          <textarea id="pull-reply" rows="4" spellcheck="false" autocomplete="off"
+            placeholder="Paste what the script copied."></textarea>
+          <button type="button" id="pull-apply">Read it in</button>
+        </li>
+      </ol>
+
+      <p class="hint" id="pull-note"></p>
+    </div>
+  </div>
+
+  <script src="/schema.js"></script>
+  <script src="/engine.js"></script>
+  <script src="/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,1 @@
+!unknown politics 'anarchy'; expected one of none, resource, worker, soldier

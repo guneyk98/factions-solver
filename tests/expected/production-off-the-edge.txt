@@ -1,0 +1,1 @@
+!WAREHOUSE at (9, 9) extends outside the village

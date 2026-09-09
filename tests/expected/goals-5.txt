@@ -1,0 +1,2 @@
+ranking=blended
+goal wood.production weight=0

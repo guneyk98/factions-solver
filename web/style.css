@@ -1,0 +1,1948 @@
+:root {
+  --bg: #1d1810;
+  --panel: #2a2318;
+  --panel-2: #362d22;
+  --panel-3: #453929;
+  --line: #6b5535;
+  --line-light: #8a7048;
+  --text: #e0d6c8;
+  --muted: #a1907a;
+  --accent: #ffd96b;
+  --accent-deep: #c8923a;
+  --bad: #e2726b;
+  --out: #5ddfbf;
+  --cost: #d99a5c;
+
+
+  --wood: #8fd18b;
+  --iron: #9cc2e8;
+  --workers: #d7bd8a;
+  --soldiers: #e59a9a;
+  --efficiency: #c2a8e0;
+
+  --col-left: 256px;
+  --col-board: 726px;
+  --col-right: 284px;
+  --col-stats: 186px;
+  --col-gap: 16px;
+}
+
+/* ---------- nothing moves when you hover ----------
+
+   The panels beside the board are given the board's height and scroll inside
+   it, and the build list keeps its own. Otherwise every hover resized the tile
+   panel and shoved the rest of the page down. */
+
+/* `contain: size` is the whole trick: the panels beside the board take their
+   height from the row and contribute none of their own, so however long the
+   tile panel gets, the board decides how tall the page is and nothing below
+   ever moves. What does not fit scrolls inside. */
+.sidebar,
+.side-column {
+  contain: size;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#place-view,
+#solve-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The controls under the list sit on the bottom edge of the column, and the
+   list is given the space between them and the tier tabs. */
+.place-bottom {
+  margin-top: auto;
+  flex: 0 0 auto;
+}
+
+.palette-grid {
+  flex: 0 0 auto;
+  /* the height is measured and set; nothing else may change it */
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.inspector {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Digits that do not shift the row they sit in. */
+.fx-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.tiled {
+  background-image:
+    var(--terrain-img, none),
+    url("https://www.factions-online.com/map/base_objects.png");
+  background-size: 1700% 3187.5%, 850% 1806.25%;
+  background-position: var(--terrain-pos, 0 0), 0.4166667% 0.1831502%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+  font-size: 17px;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.wrap {
+  width: calc(var(--col-left) + var(--col-board) + var(--col-right) + var(--col-stats) + 3 * var(--col-gap));
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+
+/* ---------- the shared looks ----------
+
+   Every box a figure or a name is typed into, and every menu picked from, is
+   the same box. The rules further down set only what differs about each: its
+   width, its padding, whether its figures are tabular. */
+
+.field input,
+.field select,
+.build-level input,
+.level-editor input,
+.goal-weight,
+.goal-reading select,
+.modifier-input,
+.modifier-select,
+.effort-fields input,
+#save-name,
+#share-text,
+#pull-script,
+#pull-reply {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus,
+.build-level input:focus,
+.level-editor input:focus,
+.goal-weight:focus,
+.goal-reading select:focus,
+.modifier-input:focus,
+.modifier-select:focus,
+.effort-fields input:focus,
+#save-name:focus,
+#share-text:focus,
+#pull-script:focus,
+#pull-reply:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Anything that scrolls inside its panel rather than moving the page. */
+.inspector,
+.palette-grid,
+.stats,
+#solve-view,
+.saves-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  padding: 10px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar .wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  padding: 5px 7px;
+}
+
+.field input {
+  width: 58px;
+}
+
+
+.count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+  padding: 4px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.count.at-cap {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--accent);
+  min-height: 1em;
+  flex: 1 1 12ch;
+}
+
+.status.error {
+  color: var(--bad);
+}
+
+
+/* Wide enough for a figure with a cap under it, so the bar never rewraps
+   itself the moment a village starts producing. */
+
+
+
+
+/* A village-wide bonus, shown beside the figure it is already counted in. */
+.total-global {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+/* ---------- the right-hand column ---------- */
+
+.side-column {
+  display: grid;
+  gap: var(--col-gap);
+  min-width: 0;
+}
+
+
+
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+
+/* The game's own tablet: a lit top edge falling to a darker bottom, in a
+   raised bronze frame that brightens on hover. */
+button {
+  padding: 6px 11px;
+  background: linear-gradient(var(--panel-3), var(--panel-2));
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Not the tiles: those are buttons too, and they carry their own ground. */
+button:hover:not(:disabled, .tile) {
+  border-color: var(--line-light);
+  background: linear-gradient(color-mix(in srgb, var(--accent) 12%, var(--panel-3)), var(--panel-2));
+}
+
+button:active:not(:disabled, .tile) {
+  background: linear-gradient(var(--panel-2), var(--panel-3));
+}
+
+/* Stands beside the selects rather than stretching with the bar. */
+#pull-open {
+  flex: none;
+}
+
+.settings-open {
+  flex: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+.settings-open:hover {
+  color: var(--text);
+}
+
+/* ---------- layout ---------- */
+
+main.wrap {
+  display: grid;
+  grid-template-columns: var(--col-left) var(--col-board) var(--col-right) var(--col-stats);
+  gap: var(--col-gap);
+  padding: 16px 0 28px;
+  align-items: stretch;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+/* The building and seal art is 256px square and is always drawn smaller, so it
+   is scaled down smoothly. The terrain sheet keeps nearest-neighbour sampling:
+   it is pixel art at its own size, and smoothing blurs it. */
+.swatch-chip img,
+.tile img,
+.tile-art,
+.seal-swatch img {
+  image-rendering: auto;
+}
+
+/* A picture as tall as the row leaves room for, so it grows with it. */
+#building-palette,
+#terrain-palette {
+  --palette-chip: calc(var(--palette-row, 36px) - 12px);
+}
+
+/* ---------- sidebar views and help ---------- */
+
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.view-tab {
+  flex: 1;
+  padding: 6px 0;
+  text-align: center;
+}
+
+.help {
+  flex: none;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  line-height: 20px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: help;
+  user-select: none;
+}
+
+h3>.help {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ---------- palette ---------- */
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.tier-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 9px;
+}
+
+.tier-tab {
+  flex: 1;
+  padding: 5px 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The height comes from sizePalette, which measures what the column has left.
+   A cap here would fight it: a 46vh one used to hold the list at 439px on a
+   tall window and no arithmetic could grow it past that. */
+#building-palette,
+#terrain-palette {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 7px;
+  height: var(--palette-row, auto);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  text-align: left;
+  width: 100%;
+}
+
+.swatch:hover {
+  background: var(--panel-2);
+}
+
+.swatch[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+.swatch-chip {
+  width: var(--palette-chip, 24px);
+  height: var(--palette-chip, 24px);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  flex: none;
+  display: grid;
+  place-items: center;
+  background-color: var(--panel-2);
+  overflow: hidden;
+}
+
+.swatch-chip img {
+  width: calc(var(--palette-chip, 24px) - 6px);
+  height: calc(var(--palette-chip, 24px) - 6px);
+}
+
+.swatch-name {
+  flex: 1;
+}
+
+.swatch-key,
+.swatch-count {
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatch.at-limit {
+  opacity: 0.5;
+}
+
+.swatch.at-limit .swatch-count {
+  color: var(--accent);
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.rotate-hint {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  color: var(--text);
+}
+
+kbd {
+  display: inline-block;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg);
+  font: inherit;
+  font-size: 0.92em;
+}
+
+.build-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.build-level input,
+.level-editor input {
+  width: 62px;
+  padding: 5px 7px;
+}
+
+.build-level input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+#build-level-note {
+  margin-top: 4px;
+}
+
+/* ---------- the solver ---------- */
+
+.goal-list {
+  list-style: decimal inside;
+  margin: 8px 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+/* A fixed height and a fixed slot for the weight, so ticking Balance swaps
+   what the slot holds without moving anything above or below it. */
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 4px 0 2px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+}
+
+.goal+.goal {
+  margin-top: 3px;
+}
+
+/* The first goal is the one that decides, unless they are being weighed. */
+.goal-list:not(.weighed) .goal:first-child .goal-name {
+  color: var(--accent);
+}
+
+.goal-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The grip, and the row it belongs to: the whole row is the handle, so the
+   grip only says so. */
+.goal-grip {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.goal-list:not(.weighed) .goal {
+  cursor: grab;
+  touch-action: none; /* a drag down the list must not scroll the panel */
+  user-select: none;
+}
+
+.goal-list:not(.weighed) .goal:hover .goal-grip,
+.goal-list:not(.weighed) .goal:focus-visible .goal-grip {
+  color: var(--text);
+}
+
+.goal:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Weights decide the answer when they are on, so there is no order to drag. */
+.goal-list.weighed .goal-grip {
+  opacity: 0.25;
+}
+
+/* The rows a drag passes slide out of its way; the dragged row follows the
+   pointer, so it is the one thing that must not be eased. */
+.goal-list.dragging .goal {
+  transition: transform 120ms ease;
+}
+
+.goal.dragged {
+  position: relative;
+  z-index: 2;
+  cursor: grabbing;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 45%);
+  transition: none;
+}
+
+.goal-mode {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+}
+
+.goal-weight {
+  width: 44px;
+  flex: 0 0 auto;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.goal-reading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.goal-reading select {
+  min-width: 0;
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 12px;
+}
+
+.goal-add select:disabled,
+#add-goal:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#add-goal {
+  flex: none;
+}
+
+#solve {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+#solve[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.solve-result {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.terrain-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+#terrain-toggle {
+  width: 100%;
+}
+
+#terrain-editor {
+  margin-top: 12px;
+}
+
+/* ---------- board bar ---------- */
+
+.board-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* Undo and redo stay by the board they step through; the three that act on
+   the whole village sit together at the far end. */
+.board-bar .board-bar-end {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.board-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.board-bar button:disabled:hover {
+  border-color: var(--line);
+}
+
+.history-step {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 5ch;
+}
+
+#share-open {
+  margin-left: auto;
+}
+
+/* ---------- the export box ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.modal-card {
+  position: relative;
+  width: 560px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modal-head h2 {
+  margin: 0;
+}
+
+.modal-close {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+/* ---------- grid ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 2px;
+  background: var(--line);
+  border-radius: 6px;
+  touch-action: none;
+  /* A drag on the board moves a building, not the text or the art: without
+     this a fast drag also leaves the browser's own text/image selection
+     painted over whatever it crossed. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.grid img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.tile {
+  position: relative;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.tile.grabbable {
+  cursor: grab;
+}
+
+.tile.terrain-mode {
+  cursor: crosshair;
+}
+
+.tile.no-build {
+  cursor: not-allowed;
+}
+
+.tile.no-build::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg,
+      rgba(0, 0, 0, 0.16) 0 3px,
+      rgba(0, 0, 0, 0) 3px 7px);
+}
+
+/* Standing where it cannot stand: the ground changed under it, and it is
+   marked until it is moved rather than being taken off the board. */
+.tile.stranded {
+  box-shadow: inset 0 0 0 2px var(--bad);
+}
+
+.tile.stranded::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bad) 26%, transparent);
+  pointer-events: none;
+}
+
+.tile.selected {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.tile.drag-source .frame {
+  opacity: 0.22;
+}
+
+.tile.drop-ok {
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.tile.drop-bad {
+  box-shadow: inset 0 0 0 3px var(--bad);
+}
+
+.tile img {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* The slot art is a 32px square whose four corner ornaments occupy the outer
+   4px and whose edges, between 4px and 28px, are stripes of constant
+   thickness. Slicing it 4px in from each side therefore stretches it to any
+   size without distorting the corners, which is what lets one frame cover the
+   two or four tiles of a multi-tile building while keeping the same margin to
+   the grid as a single tile does.
+
+   --inset-x and --inset-y are that margin, and equally the drawn width of a
+   corner slice: an eighth of a tile. As a fraction of the frame's own box they
+   are 1/8 across one tile, and 3/56 of (the box less the 2px grid gap) across
+   two. border-image-source is set by app.js. */
+.tile .frame {
+  --inset-x: 12.5%;
+  --inset-y: 12.5%;
+  position: absolute;
+  inset: 12.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: solid;
+  border-width: 0;
+  border-image-source: var(--frame-src, none);
+  border-image-slice: 4 fill;
+  border-image-width: var(--inset-y) var(--inset-x);
+  border-image-repeat: stretch;
+  pointer-events: none;
+}
+
+/* Sized off the insets, which come to an eighth of a tile whatever the frame
+   spans, so the icon is 0.55 of a tile throughout and is centred over the
+   whole building. */
+.tile .frame .art {
+  position: relative;
+  z-index: 1;
+  width: calc(var(--inset-x) * 5.8667);
+  height: calc(var(--inset-y) * 5.8667);
+  object-fit: contain;
+}
+
+.tile img.ghost,
+.tile .frame.ghost {
+  opacity: 0.5;
+}
+
+.tile img.ghost-bad,
+.tile .frame.ghost-bad {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.tile .frame.ghost .art.ghost,
+.tile .frame.ghost-bad .art.ghost-bad {
+  opacity: 1;
+}
+
+.tile.spanning {
+  overflow: visible;
+  z-index: 2;
+}
+
+/* Reaching over the next tile and the 2px gap to it, rather than over the
+   anchor alone. */
+.tile .frame.span-h {
+  right: calc(12.5% - 100% - 2px);
+  --inset-x: calc((100% - 2px) * 3 / 56);
+}
+
+.tile .frame.span-v {
+  bottom: calc(12.5% - 100% - 2px);
+  --inset-y: calc((100% - 2px) * 3 / 56);
+}
+
+/* A Square bounds the full 2x2 quadrant right and below the anchor, so the
+   frame is stretched over both axes at once. */
+.tile .frame.span-block {
+  right: calc(12.5% - 100% - 2px);
+  bottom: calc(12.5% - 100% - 2px);
+  --inset-x: calc((100% - 2px) * 3 / 56);
+  --inset-y: calc((100% - 2px) * 3 / 56);
+}
+
+/* An LShape covers three tiles of the 2x2 quadrant, so no single rectangle
+   frames it. It is drawn instead as two two-tile arms that overlap on the
+   anchor -- the bend -- one reaching along each axis. The frame element itself
+   draws no border and stays on the anchor, which keeps the icon and the seal
+   where they are on a single tile.
+
+   Each arm draws all four of its own borders, two of which fall inside the
+   building: the arm's border on the side the other arm reaches towards, over
+   the length of the bend tile. clip-path cuts that band out of each arm, and
+   the other arm's interior fill stands behind the cut. What is left is the
+   outline of the three tiles, with an unornamented right angle where the two
+   arms meet at the notch.
+
+   Both cuts take the same corner square of the bend tile, where the two
+   borders have to meet. Each cut stops one border-width short of the reflex
+   corner and runs a diagonal into it, so the arms mitre there: a stripe at a
+   given depth in one arm meets the stripe at that depth in the other, and the
+   two triangles fill the square between them.
+
+   --l-arm is the bend tile's inner extent along an arm's long axis: 3/7 of the
+   arm less the 2px grid gap, the arm being 1.75 tiles plus that gap. */
+.tile .frame.span-l {
+  --l-arm: calc((100% - 2px) * 3 / 7);
+  border-image-source: none;
+}
+
+.tile .frame.span-l::before,
+.tile .frame.span-l::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  border-style: solid;
+  border-width: 0;
+  border-image-source: var(--frame-src, none);
+  border-image-slice: 4 fill;
+  border-image-width: var(--inset-y) var(--inset-x);
+  border-image-repeat: stretch;
+}
+
+/* The arm across, then the arm down or up: one tile of the frame's own, plus
+   the neighbouring tile and the 2px gap to it, which come to 133.333% of the
+   frame's box and 2px. */
+.tile .frame.span-l::before {
+  --inset-x: calc((100% - 2px) * 3 / 56);
+  --inset-y: 12.5%;
+  top: 0;
+  bottom: 0;
+}
+
+.tile .frame.span-l::after {
+  --inset-x: 12.5%;
+  --inset-y: calc((100% - 2px) * 3 / 56);
+  left: 0;
+  right: 0;
+}
+
+.tile .frame.l-e::before,
+.tile .frame.l-n::before {
+  left: 0;
+  right: calc(-133.333% - 2px);
+}
+
+.tile .frame.l-s::before,
+.tile .frame.l-w::before {
+  left: calc(-133.333% - 2px);
+  right: 0;
+}
+
+.tile .frame.l-e::after,
+.tile .frame.l-s::after {
+  top: 0;
+  bottom: calc(-133.333% - 2px);
+}
+
+.tile .frame.l-w::after,
+.tile .frame.l-n::after {
+  top: calc(-133.333% - 2px);
+  bottom: 0;
+}
+
+/* The notch, cut from the bend end of each arm on the side the other arm
+   reaches towards. */
+.tile .frame.l-e::before {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--l-arm) 100%,
+      calc(var(--l-arm) - var(--inset-x)) 87.5%, 0 87.5%);
+}
+
+.tile .frame.l-e::after {
+  clip-path: polygon(0 0, 87.5% 0, 87.5% calc(var(--l-arm) - var(--inset-y)),
+      100% var(--l-arm), 100% 100%, 0 100%);
+}
+
+.tile .frame.l-s::before {
+  clip-path: polygon(0 0, 100% 0, 100% 87.5%,
+      calc(100% - var(--l-arm) + var(--inset-x)) 87.5%, calc(100% - var(--l-arm)) 100%, 0 100%);
+}
+
+.tile .frame.l-s::after {
+  clip-path: polygon(12.5% 0, 100% 0, 100% 100%, 0 100%, 0 var(--l-arm),
+      12.5% calc(var(--l-arm) - var(--inset-y)));
+}
+
+.tile .frame.l-w::before {
+  clip-path: polygon(0 0, calc(100% - var(--l-arm)) 0,
+      calc(100% - var(--l-arm) + var(--inset-x)) 12.5%, 100% 12.5%, 100% 100%, 0 100%);
+}
+
+.tile .frame.l-w::after {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 12.5% 100%,
+      12.5% calc(100% - var(--l-arm) + var(--inset-y)), 0 calc(100% - var(--l-arm)));
+}
+
+.tile .frame.l-n::before {
+  clip-path: polygon(0 12.5%, calc(var(--l-arm) - var(--inset-x)) 12.5%, var(--l-arm) 0,
+      100% 0, 100% 100%, 0 100%);
+}
+
+.tile .frame.l-n::after {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--l-arm)),
+      87.5% calc(100% - var(--l-arm) + var(--inset-y)), 87.5% 100%, 0 100%);
+}
+
+.tile .frame .seal {
+  /* Cornered on the frame itself, and sized off the insets, which come to an
+     eighth of a tile whatever the frame spans: 0.22 of a tile throughout. */
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: calc(var(--inset-x) * 2.3467);
+  height: calc(var(--inset-y) * 2.3467);
+  filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000);
+}
+
+.tile .level {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  pointer-events: none;
+}
+
+.tile .yield {
+  position: absolute;
+  left: 2px;
+  top: 1px;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  pointer-events: none;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.tile .yield .cap {
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+/* ---------- inspector ---------- */
+
+
+
+
+
+.level-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.level-editor button {
+  width: 28px;
+  padding: 6px 0;
+}
+
+.seal-picker {
+  margin-bottom: 10px;
+}
+
+.seal-buttons {
+  display: flex;
+  gap: 6px;
+  margin: 5px 0 6px;
+}
+
+.seal-swatch {
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.seal-swatch img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.seal-swatch[aria-pressed="true"] {
+  border-color: var(--accent);
+}
+
+.seal-swatch:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.seal-picker.no-seal>.hint:first-child {
+  opacity: 0.5;
+}
+
+/* ---------- game modifiers ---------- */
+
+details.panel {
+  grid-column: 1 / -1;
+}
+
+details.panel summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+details.panel summary::-webkit-details-marker {
+  display: none;
+}
+
+details.panel summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 11px;
+}
+
+details.panel[open] summary::before {
+  content: "▾";
+}
+
+details.panel summary h2 {
+  margin: 0;
+}
+
+.modifiers-set {
+  color: var(--accent);
+}
+
+.modifiers-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px 26px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+.modifier-group {
+  min-width: 0;
+}
+
+/* The wide table stands beside both narrow groups rather than under one. */
+.modifier-group-wide {
+  grid-row: span 2;
+}
+
+/* Nine columns is more than a narrow window has room for; the table scrolls
+   inside its own group rather than pushing the page sideways. */
+.modifier-scroll {
+  overflow-x: auto;
+}
+
+.modifier-group h3 {
+  margin: 0 0 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.modifier-group .hint {
+  margin-bottom: 8px;
+  max-width: 46ch;
+}
+
+.modifier-scalars {
+  display: grid;
+  gap: 5px;
+}
+
+.modifier-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.modifier-field em {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.modifier-field>span:first-child {
+  flex: 1;
+}
+
+.modifier-unit {
+  opacity: 0.6;
+}
+
+.modifier-table {
+  border-collapse: collapse;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.modifier-table th {
+  font-weight: 600;
+  text-align: center;
+  padding: 0 4px 4px;
+  white-space: nowrap;
+}
+
+.modifier-table td {
+  padding: 2px 4px 2px 0;
+}
+
+.modifier-row-name {
+  text-align: right;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+.modifier-input {
+  width: 62px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* A number field carries a stepper, which in a box this narrow takes as much
+   room as the figure does. The arrow keys still step it. */
+.modifier-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.modifier-input::-webkit-outer-spin-button,
+.modifier-input::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Eight of them across, so they give up what the standalone boxes can spare. */
+.modifier-table .modifier-input {
+  width: 54px;
+}
+
+/* Sized to end where the boxes above it do, so the column keeps one edge. */
+.modifier-select {
+  width: 94px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* The same, where the background stays put. */
+.tier-tab[aria-pressed="true"],
+#terrain-toggle[aria-pressed="true"],
+.modifier-input.modifier-on,
+.modifier-select.modifier-on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* It answers for every group, so it sits under all of them rather than in the
+   column the last one happened to leave room in. */
+.modifiers-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.modifiers-foot .hint {
+  margin: 0;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+.wood-value {
+  color: var(--wood);
+}
+
+.iron-value {
+  color: var(--iron);
+}
+
+.workers-value {
+  color: var(--workers);
+}
+
+.soldiers-value {
+  color: var(--soldiers);
+}
+
+.efficiency-value {
+  color: var(--efficiency);
+}
+
+/* ---------- settings ---------- */
+
+.setting+.setting {
+  margin-top: 14px;
+}
+
+.setting-name {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.choice {
+  display: flex;
+  gap: 4px;
+}
+
+.choice button {
+  flex: 1;
+  padding: 7px 0;
+  text-align: center;
+}
+
+/* Everything that reads as "picked". */
+.view-tab[aria-pressed="true"],
+.choice button[aria-pressed="true"],
+.help:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--panel-2);
+}
+
+.choice button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.choice button:disabled:hover {
+  border-color: var(--line);
+}
+
+#effort-note {
+  margin-top: 8px;
+}
+
+.effort-fields {
+  display: grid;
+  grid-template-columns: auto 90px 1fr;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.effort-fields label {
+  display: contents;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.effort-fields input {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.effort-fields .hint {
+  font-size: 11px;
+}
+
+.effort-fields input:disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+/* What a building does, blocked the way the game blocks it: what it is worth
+   anywhere, then a block per ground it cares about, then what its neighbours
+   contribute to it. Blocks that are not in force stay, greyed, which is how
+   you find out what a building wants. */
+.fx-head {
+  margin: 10px 0 0;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 4px 4px 0 0;
+  border-left: 3px solid var(--fx);
+  background: color-mix(in srgb, var(--fx) 14%, var(--panel-2));
+  color: color-mix(in srgb, var(--fx) 70%, var(--text));
+}
+
+.fx-base,
+.fx-iron {
+  --fx: var(--iron);
+}
+
+.fx-terrain,
+.fx-wood {
+  --fx: var(--wood);
+}
+
+.fx-adj,
+.fx-aura,
+.fx-village {
+  --fx: var(--accent);
+}
+
+.fx-gives {
+  --fx: var(--efficiency);
+}
+
+.fx-out {
+  --fx: var(--out);
+}
+
+.fx-cost {
+  --fx: var(--cost);
+}
+
+/* A price is two figures per resource: what the next level asks, and what the
+   levels already standing were paid for. Each keeps a column of its own so
+   the two read down rather than across. */
+.fx-list.fx-cost .fx-what {
+  flex: 1 1 auto;
+}
+
+.fx-list.fx-cost .fx-value {
+  margin-left: 0;
+  flex: 0 0 64px;
+  text-align: right;
+}
+
+.fx-list.fx-cost .fx-cols .fx-value {
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.fx-workers {
+  --fx: var(--workers);
+}
+
+.fx-soldiers {
+  --fx: var(--soldiers);
+}
+
+.fx-list {
+  list-style: none;
+  margin: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-left: 3px solid color-mix(in srgb, var(--fx) 45%, transparent);
+  background: color-mix(in srgb, var(--fx) 5%, transparent);
+  border-radius: 0 0 4px 4px;
+}
+
+.fx-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.7;
+}
+
+.fx-what {
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* In the total block each part keeps a column, so the figures line up. */
+.fx-list.fx-out .fx-what {
+  flex: 1 1 auto;
+}
+
+.fx-list.fx-out .fx-value {
+  margin-left: 0;
+  flex: 0 0 58px;
+  text-align: right;
+}
+
+/* A share or a flat figure adds, and reads plain; a factor multiplies what is
+   already there, and reads green. */
+.fx-value {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fx-plus {
+  color: var(--text);
+}
+
+.fx-times {
+  color: var(--wood);
+}
+
+/* Who an aura reaches, under the figure it is worth. */
+.fx-reaches {
+  flex-basis: 100%;
+  margin-left: 2px;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.fx-from {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Said of a figure rather than of a building: that it scales with the level,
+   or that it is worth its share to the village rather than to this tile. */
+.fx-note {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.fx-global {
+  color: var(--iron);
+  border-color: color-mix(in srgb, var(--iron) 45%, transparent);
+}
+
+/* Shown, but not in force here. */
+.fx-dim {
+  --fx: var(--line);
+}
+
+.fx-dim.fx-head,
+.fx-dim.fx-list,
+.fx-dim.fx-list .fx-value,
+.fx-list li.fx-dim,
+.fx-list li.fx-dim .fx-value {
+  color: var(--muted);
+}
+
+/* ---------- saved layouts ---------- */
+
+.save-form {
+  display: flex;
+  gap: 8px;
+}
+
+#save-name {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+}
+
+
+.save-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.save-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.save-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.save-when,
+.save-empty {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.save-empty {
+  padding: 8px 0;
+}
+
+.save-drop[data-armed="yes"] {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+#saves-note {
+  margin-top: 8px;
+}
+
+/* ---------- export and import ---------- */
+
+#share-text,
+#pull-script,
+#pull-reply {
+  width: 100%;
+  padding: 7px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: 11px/1.5 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+
+.share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.share-actions .checkbox {
+  margin-left: 6px;
+}
+
+#share-note {
+  margin-top: 8px;
+}
+
+/* Wider than the rest: the script the reader copies wants whole lines. */
+.modal-wide {
+  width: 720px;
+}
+
+/* The faction, as the last whole-faction read left it, to pick from. */
+.pull-members {
+  margin: 0 0 10px;
+}
+
+.pull-member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  max-height: 132px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.pull-member {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pull-steps {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.pull-steps li+li {
+  margin-top: 12px;
+}
+
+.pull-steps textarea {
+  margin-top: 6px;
+}
+
+.pull-steps button {
+  margin-top: 6px;
+}
+
+#pull-note {
+  margin-top: 12px;
+}
+
+
+@media (max-width: 1180px) {
+  .wrap {
+    width: 100%;
+  }
+
+  main.wrap {
+    grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right) var(--col-stats);
+    padding: 16px 16px 28px;
+  }
+}
+
+@media (max-width: 860px) {
+  main.wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .board {
+    max-width: var(--col-board);
+    margin: 0 auto;
+  }
+}
+
+/* ---------- the tile panel's head ----------
+
+   The ground as a swatch, where it is in the corner, and the building as the
+   picture it is on the board. Anyone reading this knows the game; a list
+   spelling out "Terrain: Forest" earns none of the room it takes. */
+
+.tile-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tile-ground {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.tile-where {
+  justify-self: end;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-face {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The picture and the level it stands at read as one thing. */
+.tile-head+.level-editor {
+  margin-top: -46px;
+  margin-left: 54px;
+}
+
+.tile-art {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+}
+
+.tile-none {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* What the village comes to, beside what a tile comes to, in the same blocks. */
+.stats {
+  contain: size;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.stats .fx-head:first-child {
+  margin-top: 0;
+}
+
+/* The modifiers bar runs under everything, not under three of four columns. */
+.modifiers {
+  grid-column: 1 / -1;
+}
+
+/* ---------- what a search came back with ----------
+
+   The left column is narrow, so a goal's row carries only what it comes to
+   now and by how much. What it started from, and what it reaches on its own,
+   are on the row's tooltip. */
+
+.solve-result {
+  margin: 10px 0 0;
+}
+
+.solve-goals {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel-2);
+  font-size: 11.5px;
+}
+
+.solve-goals li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.75;
+  white-space: nowrap;
+}
+
+.solve-goal {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+/* Fixed widths so the figures line up in a column rather than wherever the
+   name happens to end. */
+.solve-now {
+  flex: 0 0 auto;
+  width: 58px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.solve-change {
+  flex: 0 0 auto;
+  width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.solve-change.up {
+  color: var(--wood);
+}
+
+.solve-change.down {
+  color: var(--bad);
+}
+
+.solve-summary {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* The goals and the result scroll with the view rather than past the bottom
+   of the column. */
+#solve-view {
+  overflow-y: auto;
+}

@@ -1,0 +1,1 @@
+!unknown seal 'emerald' in 'PLAINS:WOODCUTTER:1:emerald' at index 75

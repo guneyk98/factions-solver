@@ -1,0 +1,1 @@
+restarts=24 iterations=100000 improvementPasses=40 budget=200000 first=0 count=0

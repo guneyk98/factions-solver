@@ -1,0 +1,1 @@
+!tile HIGH_MOUNTAIN at (3, 6) cannot hold a building

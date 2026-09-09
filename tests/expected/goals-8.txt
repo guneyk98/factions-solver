@@ -1,0 +1,1 @@
+!goal 'wood.production' is named twice

@@ -1,0 +1,44 @@
+ 168 FORGOTTEN_WEALD  10x10 24 buildings, 69 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+ 139 VOLBADIHR        10x10 24 buildings, 71 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+ 122 ALPINE           10x10 24 buildings, 71 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+  77 ALPINE           10x10 24 buildings, 69 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+  52 SMALLWORLD       10x10 24 buildings, 71 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+  50 NECROPOLIS       10x10 24 buildings, 71 effects, 5 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+  49 FORGOTTEN_WEALD  10x10 24 buildings, 58 effects, 3 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling
+  48 WETLANDS         10x10 24 buildings, 57 effects, 3 unmodelled
+       GUARDIAN_TRAINING_CENTER.guardianPower
+       KNIGHT_TRAINING_CENTER.knightPower
+       RECYCLING_WORKSHOP.recycling

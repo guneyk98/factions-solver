@@ -1,0 +1,2 @@
+ranking=in-order
+goal soldiers.production.attack weight=1

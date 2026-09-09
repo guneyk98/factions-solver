@@ -1,0 +1,2 @@
+ranking=in-order
+goal workers.production.map weight=1

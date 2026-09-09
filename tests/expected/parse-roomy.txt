@@ -1,0 +1,1 @@
+!TOWN_HALL at (1, 0) overlaps another building at (1, 0)

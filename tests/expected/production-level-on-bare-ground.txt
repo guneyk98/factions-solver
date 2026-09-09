@@ -1,0 +1,1 @@
+!bare ground at (3, 7) is at level 3, but nothing stands there

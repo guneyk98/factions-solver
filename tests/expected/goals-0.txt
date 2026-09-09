@@ -1,0 +1,2 @@
+ranking=in-order
+goal wood.production weight=1

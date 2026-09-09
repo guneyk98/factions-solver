@@ -1,0 +1,1 @@
+!goal 'wood.production' has a weight of '-1', which must be a number of at least 0

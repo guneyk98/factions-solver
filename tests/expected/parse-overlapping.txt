@@ -1,0 +1,1 @@
+!WOODCUTTER at (2, 7) overlaps another building at (2, 7)

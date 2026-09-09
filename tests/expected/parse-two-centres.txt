@@ -1,0 +1,1 @@
+!a village may hold at most 1 VILLAGE_CENTRE, got 2
