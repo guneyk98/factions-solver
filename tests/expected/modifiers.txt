@@ -137,4 +137,28 @@ efficiency.projects.seasonal_events neutral=1 minimum=0
 efficiency.projects.supply_upkeep neutral=1 minimum=0
 efficiency.projects.talents neutral=1 minimum=0
 efficiency.projects.redistribution neutral=0 minimum=0
-139 modifiers
+power.support.event_projects neutral=0 minimum=-1
+power.support.specialisation neutral=0 minimum=-1
+power.support.projects neutral=1 minimum=0
+power.support.personal_project neutral=1 minimum=0
+power.support.seasonal_events neutral=1 minimum=0
+power.support.supply_upkeep neutral=1 minimum=0
+power.support.talents neutral=1 minimum=0
+power.support.redistribution neutral=0 minimum=0
+power.knight.event_projects neutral=0 minimum=-1
+power.knight.specialisation neutral=0 minimum=-1
+power.knight.projects neutral=1 minimum=0
+power.knight.personal_project neutral=1 minimum=0
+power.knight.seasonal_events neutral=1 minimum=0
+power.knight.supply_upkeep neutral=1 minimum=0
+power.knight.talents neutral=1 minimum=0
+power.knight.redistribution neutral=0 minimum=0
+power.guardian.event_projects neutral=0 minimum=-1
+power.guardian.specialisation neutral=0 minimum=-1
+power.guardian.projects neutral=1 minimum=0
+power.guardian.personal_project neutral=1 minimum=0
+power.guardian.seasonal_events neutral=1 minimum=0
+power.guardian.supply_upkeep neutral=1 minimum=0
+power.guardian.talents neutral=1 minimum=0
+power.guardian.redistribution neutral=0 minimum=0
+163 modifiers

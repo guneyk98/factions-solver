@@ -66,6 +66,9 @@ void write(std::ostream& to)
        << "  // them without keeping a second copy.\n"
        << "  politicsBonus: " << quantity(PoliticsBonus) << ",\n"
        << "  baseMarketTax: " << quantity(BaseMarketTax) << ",\n"
+       << "  // What the hq is worth on knight and on guardian power, before\n"
+       << "  // any share or factor.\n"
+       << "  basePower: " << quantity(BasePower) << ",\n"
        << "  masterSealBonus: " << quantity(MasterSealBonus) << ",\n"
        << "  sealBonus: " << quantity(SealBonus) << ",\n"
        << "  // What each season change multiplies every cost multiplier by.\n"
@@ -94,6 +97,8 @@ void write(std::ostream& to)
        << "  rateOrCapacities: " << names(RateOrCapacities::Ids) << ",\n"
        << "  efficiencies: " << names(Efficiencies::Ids) << ",\n"
        << "  efficiencyField: " << quoted(Efficiencies::Field) << ",\n"
+       << "  powers: " << names(Powers::Ids) << ",\n"
+       << "  powerField: " << quoted(Powers::Field) << ",\n"
        << "  politicsField: " << quoted(PoliticsChoices::Field) << ",\n";
 
     to << "  modifierSources: [\n";

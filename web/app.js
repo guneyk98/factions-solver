@@ -227,15 +227,9 @@ const RATE_OR_CAPACITIES = joined(SCHEMA.rateOrCapacities, {
   storage: { suffix: ' cap', full: 'storage' },
 }, 'rate or capacity');
 
-const OBJECTIVES = RATE_OR_CAPACITIES.flatMap((m) => RESOURCES.map((r) => ({
+const RESOURCE_OBJECTIVES = RATE_OR_CAPACITIES.flatMap((m) => RESOURCES.map((r) => ({
   id: `${r.key}.${m.key}`, name: `${r.name}${m.suffix}`, full: `${r.name} ${m.full}`,
 })));
-
-/* Every goal is always listed, so this fixes only the order they break ties
-   in: production before storage, and within each the reading order rather than
-   the engine's enumerator order. */
-const GOAL_ORDER = ['wood.production', 'iron.production', 'soldiers.production', 'workers.production',
-  'wood.storage', 'iron.storage', 'soldiers.storage', 'workers.storage'];
 
 // The five world ratings, each a share rather than a resource.
 const EFFICIENCIES = joined(SCHEMA.efficiencies, {
@@ -245,6 +239,31 @@ const EFFICIENCIES = joined(SCHEMA.efficiencies, {
   map: { name: 'Map', short: 'map', soldiers: false, workers: true },
   projects: { name: 'Projects', short: 'prj', soldiers: false, workers: true },
 }, 'efficiency');
+
+/* The military powers, each an absolute figure that starts from the base the
+   hq is worth rather than a share. Support power is not a rating of its own:
+   it counts towards knight and towards guardian power alike, so it is already
+   in both and is reported on its own as what the two have in common. */
+const POWERS = joined(SCHEMA.powers, {
+  support: { name: 'Support', short: 'sup', full: 'base support power' },
+  knight: { name: 'Knight', short: 'kni', full: 'knight power' },
+  guardian: { name: 'Guardian', short: 'gua', full: 'guardian power' },
+}, 'power');
+
+const BASE_POWER = SCHEMA.basePower;
+
+/* One goal, read three ways, as the soldier and worker goals are: the base
+   reading is the support power both of the others already include. */
+const POWER_GOAL = `${SCHEMA.powerField}.${POWERS[0].key}`;
+
+const OBJECTIVES = [...RESOURCE_OBJECTIVES,
+  { id: POWER_GOAL, name: 'Power', full: POWERS[0].full }];
+
+/* Every goal is always listed, so this fixes only the order they break ties
+   in: production before storage, and within each the reading order rather than
+   the engine's enumerator order. Power, which is neither, comes last. */
+const GOAL_ORDER = ['wood.production', 'iron.production', 'soldiers.production', 'workers.production',
+  'wood.storage', 'iron.storage', 'soldiers.storage', 'workers.storage', POWER_GOAL];
 
 const SOLDIER_EFFICIENCIES = EFFICIENCIES.filter((e) => e.soldiers);
 
@@ -318,10 +337,20 @@ const WORKER_MODES = [
   },
 ];
 
+/* The base reading first, as the other two mode lists have it: it is the goal
+   OBJECTIVES carries and the one a fresh page starts on. */
+const POWER_MODES = POWERS.map((p, nth) => ({
+  key: p.key,
+  id: `${SCHEMA.powerField}.${p.key}`,
+  name: nth === 0 ? 'Power' : `Power (${p.short})`,
+  full: p.full,
+  option: p.name,
+}));
+
 // Every goal the search accepts must be reachable from the menu, and vice versa.
 (function everyGoalIsReachable() {
   const engine = new Set(SCHEMA.goals.map((g) => g.id));
-  const page = new Set([...OBJECTIVES, ...MARKET_GOALS, ...SOLDIER_MODES, ...WORKER_MODES].map((g) => g.id));
+  const page = new Set([...OBJECTIVES, ...MARKET_GOALS, ...SOLDIER_MODES, ...WORKER_MODES, ...POWER_MODES].map((g) => g.id));
 
   const unreachable = [...engine].filter((id) => !page.has(id));
   if (unreachable.length) throw new Error(`no menu entry for: ${unreachable.join(', ')}`);
@@ -410,8 +439,9 @@ function modifierIn(fields, id) {
   return was === undefined ? undefined : fields[`${id.slice(0, dot)}.${was}`];
 }
 
-// The efficiencies take the same sources less the three resource-only ones.
-const EFFICIENCY_SOURCES = MODIFIER_SOURCES.filter((w) => !w.resourceOnly);
+// The efficiencies and the powers take the same sources less the three
+// resource-only ones.
+const COMBAT_SOURCES = MODIFIER_SOURCES.filter((w) => !w.resourceOnly);
 
 // One column of either modifier table: one quantity, with an input per source.
 const RESOURCE_COLUMNS = RESOURCES.flatMap((r) => RATE_OR_CAPACITIES.map((m) => ({
@@ -420,6 +450,10 @@ const RESOURCE_COLUMNS = RESOURCES.flatMap((r) => RATE_OR_CAPACITIES.map((m) => 
 
 const EFFICIENCY_COLUMNS = EFFICIENCIES.map((e) => ({
   id: `${SCHEMA.efficiencyField}.${e.key}`, name: e.name, cls: 'efficiency-value',
+}));
+
+const POWER_COLUMNS = POWERS.map((p) => ({
+  id: `${SCHEMA.powerField}.${p.key}`, name: p.name, cls: 'power-value',
 }));
 
 // A choice rather than a quantity: whichever production is selected is
@@ -507,6 +541,7 @@ const state = {
   goals: [...GOAL_ORDER],
   soldierMode: SOLDIER_MODES[0].key,
   workerMode: WORKER_MODES[0].key,
+  powerMode: POWER_MODES[0].key,
   marketGoals: false,
   effort: 'normal',
   customEffort: { ...EFFORTS.normal },
@@ -969,6 +1004,9 @@ const NO_GLOBAL = { production: NO_RESOURCES, storage: NO_RESOURCES };
 // Placeholder efficiencies until the engine has replied.
 const NO_SIDES = Object.fromEntries(EFFICIENCIES.map((e) => [e.key, 0]));
 const NO_EFFECTIVE = { soldiers: NO_SIDES, workers: NO_SIDES };
+/* Until the engine has replied, every power is the base the hq is worth, which
+   is what an empty village with no modifiers has. */
+const NO_POWER = Object.fromEntries(POWERS.map((p) => [p.key, BASE_POWER]));
 // Until then the market keeps its base share of zero production.
 const NO_MARKET = { tax: MARKET_TAX, wood: 0, iron: 0 };
 
@@ -1020,6 +1058,14 @@ function buildEfficiencyRows() {
   const efficiency = document.getElementById('efficiency-list');
   for (const e of EFFICIENCIES)
     row(efficiency, `efficiency-${e.key}`, e.short, 'efficiency-value', `${e.name} efficiency`, '+0%');
+
+  const power = document.getElementById('power-list');
+  for (const p of POWERS) {
+    row(power, `power-${p.key}`, p.short, 'power-value',
+      p.key === 'support' ? 'Support power, which counts towards both of the others'
+        : `${p.name} power, support power included`,
+      fmt(BASE_POWER, 3));
+  }
 }
 
 buildEfficiencyRows();
@@ -1033,6 +1079,10 @@ function renderStats() {
 
   for (const { key } of EFFICIENCIES)
     document.getElementById(`efficiency-${key}`).textContent = unknown ? NOT_KNOWN : pct(efficiency[key]);
+
+  const power = state.result?.power ?? NO_POWER;
+  for (const { key } of POWERS)
+    document.getElementById(`power-${key}`).textContent = unknown ? NOT_KNOWN : fmt(power[key], 3);
 
   for (const { key } of SOLDIER_EFFICIENCIES)
     document.getElementById(`effective-soldiers-${key}`).textContent = unknown ? NOT_KNOWN : fmt(effective.soldiers[key], 3);
@@ -1130,7 +1180,8 @@ const QUANTITY_NAMES = {
 // Quantities the engine carries through to the totals. The rest are displayed
 // and labelled as uncounted rather than silently dropped.
 const COUNTED = new Set(['wood', 'iron', 'workers', 'soldiers', 'attack', 'defense',
-  'map_efficiency', 'worker_project_efficiency', 'market_tax', 'efficiency']);
+  'map_efficiency', 'worker_project_efficiency', 'knightPower', 'guardianPower',
+  'market_tax', 'efficiency']);
 
 // Quantities the Makes and Holds blocks already total, so Total skips them.
 const COUNTED_IN_OUTPUT = new Set(['wood', 'iron', 'workers', 'soldiers', 'efficiency']);
@@ -1164,9 +1215,14 @@ function onlyQuantityBoosted(effect) {
 const WORLD_RATINGS = new Set(['attack', 'defense', 'knightPower', 'guardianPower',
   'map_efficiency', 'worker_project_efficiency']);
 
+// The two of those that are a power rather than an efficiency: their names
+// already say what they are, so nothing is appended to them.
+const WORLD_POWERS = new Set(['knightPower', 'guardianPower']);
+
 function effectLabel(effect) {
   if (WORLD_RATINGS.has(effect.quantity)) {
-    return `${QUANTITY_NAMES[effect.quantity] ?? effect.quantity} efficiency`;
+    const rating = QUANTITY_NAMES[effect.quantity] ?? effect.quantity;
+    return WORLD_POWERS.has(effect.quantity) ? rating : `${rating} efficiency`;
   }
   if (effect.quantity === 'efficiency') {
     const only = onlyQuantityBoosted(effect);
@@ -1697,7 +1753,8 @@ function buildModifierPanel() {
   // Resource columns follow the goal menu's order: rate first, then capacity,
   // both in their resource's colour.
   buildModifierTable('modifier-columns', RESOURCE_COLUMNS, MODIFIER_SOURCES);
-  buildModifierTable('modifier-efficiency', EFFICIENCY_COLUMNS, EFFICIENCY_SOURCES);
+  buildModifierTable('modifier-efficiency', EFFICIENCY_COLUMNS, COMBAT_SOURCES);
+  buildModifierTable('modifier-power', POWER_COLUMNS, COMBAT_SOURCES);
 }
 
 function buildModifierTable(bodyId, columns, sources) {
@@ -2553,10 +2610,11 @@ const solveButton = document.getElementById('solve');
 const solveResult = document.getElementById('solve-result');
 const soldierModeSelect = document.getElementById('soldier-mode');
 const workerModeSelect = document.getElementById('worker-mode');
+const powerModeSelect = document.getElementById('power-mode');
 const marketBox = document.getElementById('goal-market');
 // Every variant has an id of its own, which is what a search returns, so each
 // must be resolvable to a name here.
-const GOAL_BY_ID = new Map([...OBJECTIVES, ...SOLDIER_MODES, ...WORKER_MODES, ...MARKET_GOALS].map((o) => [o.id, o]));
+const GOAL_BY_ID = new Map([...OBJECTIVES, ...SOLDIER_MODES, ...WORKER_MODES, ...POWER_MODES, ...MARKET_GOALS].map((o) => [o.id, o]));
 const balanceBox = document.getElementById('goal-balance');
 
 function soldierMode() {
@@ -2567,11 +2625,16 @@ function workerMode() {
   return WORKER_MODES.find((m) => m.key === state.workerMode) ?? WORKER_MODES[0];
 }
 
+function powerMode() {
+  return POWER_MODES.find((m) => m.key === state.powerMode) ?? POWER_MODES[0];
+}
+
 // A goal's label and requested id depend on the variant selected for it; a
 // goal with a single variant always resolves to that one.
 function goalReading(id) {
   if (id === SOLDIER_GOAL) return soldierMode();
   if (id === WORKER_GOAL) return workerMode();
+  if (id === POWER_GOAL) return powerMode();
   if (state.marketGoals && MARKET_BY_BASE.has(id)) return MARKET_BY_BASE.get(id);
   return GOAL_BY_ID.get(id);
 }
@@ -2734,8 +2797,8 @@ balanceBox.addEventListener('change', () => {
   saveSoon();
 });
 
-/* The soldier and worker goals each offer the same choice of variant, so both
-   menus are filled and wired the same way. Picking one relabels the goal it
+/* The soldier, worker and power goals each offer a choice of variant, so all
+   three menus are filled and wired the same way. Picking one relabels the goal it
    belongs to, which is why each writes to state and re-renders the list. */
 function buildModeSelect(select, modes, chosen) {
   for (const mode of modes) addOption(select, mode.key, mode.option, `Ask the search for ${mode.full}`);
@@ -2750,6 +2813,7 @@ function buildModeSelect(select, modes, chosen) {
 
 buildModeSelect(soldierModeSelect, SOLDIER_MODES, (key) => { state.soldierMode = key; });
 buildModeSelect(workerModeSelect, WORKER_MODES, (key) => { state.workerMode = key; });
+buildModeSelect(powerModeSelect, POWER_MODES, (key) => { state.powerMode = key; });
 
 marketBox.addEventListener('change', () => {
   state.marketGoals = marketBox.checked;
@@ -3051,6 +3115,7 @@ function controls() {
     goals: [...state.goals],
     soldierMode: state.soldierMode,
     workerMode: state.workerMode,
+    powerMode: state.powerMode,
     marketGoals: state.marketGoals,
     effort: state.effort,
     customEffort: { ...state.customEffort },
@@ -3108,6 +3173,7 @@ function restoreFromStorage() {
 
   if (SOLDIER_MODES.some((m) => m.key === view.soldierMode)) state.soldierMode = view.soldierMode;
   if (WORKER_MODES.some((m) => m.key === view.workerMode)) state.workerMode = view.workerMode;
+  if (POWER_MODES.some((m) => m.key === view.powerMode)) state.powerMode = view.powerMode;
   state.marketGoals = view.marketGoals === true;
 
   if (view.effort === 'custom' || Object.hasOwn(EFFORTS, view.effort)) state.effort = view.effort;
@@ -3783,11 +3849,23 @@ const WORLD_SUBTYPE = {
   projects: 'worker_project_efficiency',
 };
 
+/* And the same for the powers. Support power has no column of its own: the api
+   reports what it grants inside both knightPower and guardianPower, so an
+   import fills those two and leaves support at its neutral rather than
+   counting the same bonus twice. */
+const WORLD_POWER_SUBTYPE = {
+  knight: 'knightPower',
+  guardian: 'guardianPower',
+};
+
 // Where each modifier column lives in an effects reply.
 const EFFECT_COLUMNS = [
   ...RESOURCES.flatMap((r) => RATE_OR_CAPACITIES.map((m) => ({ id: `${r.key}.${m.key}`, section: m.key, subtype: r.key }))),
   ...EFFICIENCIES.map((e) => ({
     id: `${SCHEMA.efficiencyField}.${e.key}`, section: 'world', subtype: WORLD_SUBTYPE[e.key],
+  })),
+  ...POWERS.filter((p) => WORLD_POWER_SUBTYPE[p.key] !== undefined).map((p) => ({
+    id: `${SCHEMA.powerField}.${p.key}`, section: 'world', subtype: WORLD_POWER_SUBTYPE[p.key],
   })),
 ];
 
@@ -4367,6 +4445,7 @@ if (restored !== null) {
   balanceBox.checked = state.balance;
   soldierModeSelect.value = state.soldierMode;
   workerModeSelect.value = state.workerMode;
+  powerModeSelect.value = state.powerMode;
   marketBox.checked = state.marketGoals;
   shareModifiers.checked = restored.shareModifiers === true;
   modifiersPanel.open = restored.modifiersOpen === true;

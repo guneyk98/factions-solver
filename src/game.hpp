@@ -48,12 +48,12 @@ enum class Quantity {
     Defense,
     MapEfficiency,
     WorkerProjectEfficiency,
+    KnightPower,
+    GuardianPower,
     MarketTax,
     Efficiency, // an aura over whatever the target produces or holds
 
     // Enumerated so they can be reported as unmodelled; never counted.
-    KnightPower,
-    GuardianPower,
     Recycling,
     Specialization,
 
@@ -175,7 +175,7 @@ const Config* find(int id);
 // but never counted.
 constexpr bool modelled(Quantity quantity)
 {
-    return quantity < Quantity::KnightPower;
+    return quantity < Quantity::Recycling;
 }
 
 std::string_view name(Quantity quantity);

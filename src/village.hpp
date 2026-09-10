@@ -192,6 +192,14 @@ enum class Efficiency {
     Count
 };
 
+enum class Power {
+    Support,
+    Knight,
+    Guardian,
+
+    Count
+};
+
 /* What contributes to one quantity, ordered by when it is applied: terrain
    twice (a share of the base, and a flat amount added to the base), the
    remaining shares, the factors over their sum, then redistribution, which is
@@ -243,6 +251,8 @@ constexpr std::optional<Resource> tryFromId(std::string_view id) { return Enum::
    applies to the sum of the two. */
 inline constexpr std::array<double, Enum::Count<Resource>> BaseStorage{500, 500, 100, 200};
 
+inline constexpr double BasePower = 20.0;
+
 namespace RateOrCapacities {
 inline constexpr std::array<std::string_view, Enum::Count<RateOrCapacity>> Ids{"production", "storage"};
 static_assert(Enum::allDifferent(Ids), "each measure needs an id of its own");
@@ -276,6 +286,21 @@ constexpr bool scaledByQuests(Efficiency efficiency) { return efficiency != Effi
 constexpr std::string_view toId(Efficiency efficiency) { return Ids[static_cast<std::size_t>(efficiency)]; }
 constexpr std::optional<Efficiency> tryFromId(std::string_view id) { return Enum::find<Efficiency>(Ids, id); }
 } // namespace Efficiencies
+
+namespace Powers {
+
+inline constexpr std::string_view Field = "power";
+
+inline constexpr std::array<std::string_view, Enum::Count<Power>> Ids{
+    "support", "knight", "guardian"
+};
+static_assert(Enum::allDifferent(Ids), "each power needs an id of its own");
+
+constexpr bool countsTowardsBoth(Power power) { return power == Power::Support; }
+
+constexpr std::string_view toId(Power power) { return Ids[static_cast<std::size_t>(power)]; }
+constexpr std::optional<Power> tryFromId(std::string_view id) { return Enum::find<Power>(Ids, id); }
+} // namespace Powers
 
 namespace ModifierSources {
 inline constexpr std::array<std::string_view, Enum::Count<ModifierSource>> Ids{
@@ -491,6 +516,11 @@ struct Output {
     // One per Efficiency, in enumerator order, each a share above 0.
     std::array<double, Enum::Count<Efficiency>> efficiency{};
 
+    /* One per Power, in enumerator order, each an absolute figure. Knight and
+       guardian power each include the support power, which is also reported on
+       its own. */
+    std::array<double, Enum::Count<Power>> power{};
+
     MarketTotals market;
 };
 
@@ -502,6 +532,11 @@ constexpr double effectiveSoldiers(const Output& output, double efficiency)
 constexpr double efficiencyOf(const Output& output, Efficiency efficiency)
 {
     return output.efficiency[static_cast<std::size_t>(efficiency)];
+}
+
+constexpr double powerOf(const Output& output, Power power)
+{
+    return output.power[static_cast<std::size_t>(power)];
 }
 
 /* Worker production scaled by efficiency. Worker efficiency multiplies every
@@ -529,18 +564,25 @@ struct ModifierSet {
        part in it and are summed by the two functions below. */
     constexpr double multiplier(double sharesFromBuildings) const
     {
-        double shares = 1.0 + sharesFromBuildings;
-        double factor = 1.0;
+        return (1.0 + sharesFromBuildings + shares()) * factors();
+    }
 
-        for (const ModifierSource source : Enum::values<ModifierSource>()) {
-            if (ModifierSources::addedBeforeMultiplier(source) || ModifierSources::addedAfterMultiplier(source))
-                continue;
+    constexpr double shares() const
+    {
+        double sum = 0.0;
+        for (const ModifierSource source : Enum::values<ModifierSource>())
             if (ModifierSources::isShare(source))
-                shares += (*this)[source];
-            else
-                factor *= (*this)[source];
-        }
-        return shares * factor;
+                sum += (*this)[source];
+        return sum;
+    }
+
+    constexpr double factors() const
+    {
+        double product = 1.0;
+        for (const ModifierSource source : Enum::values<ModifierSource>())
+            if (!ModifierSources::isShare(source) && !ModifierSources::addedBeforeMultiplier(source) && !ModifierSources::addedAfterMultiplier(source))
+                product *= (*this)[source];
+        return product;
     }
 
     // Added to the base, so multiplier() then scales it.
@@ -585,17 +627,21 @@ struct GameModifiers {
        village produces per tick need not affect what it can hold. */
     std::array<std::array<ModifierSet, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> resource_modifiers{};
     std::array<ModifierSet, Enum::Count<Efficiency>> efficiency_modifiers{};
+    std::array<ModifierSet, Enum::Count<Power>> power_modifiers{};
 
     constexpr ModifierSet& forQuantity(Resource resource, RateOrCapacity rateOrCapacity) { return resource_modifiers[static_cast<std::size_t>(resource)][static_cast<std::size_t>(rateOrCapacity)]; }
     constexpr const ModifierSet& forQuantity(Resource resource, RateOrCapacity rateOrCapacity) const { return resource_modifiers[static_cast<std::size_t>(resource)][static_cast<std::size_t>(rateOrCapacity)]; }
 
     constexpr ModifierSet& forQuantity(Efficiency efficiency) { return efficiency_modifiers[static_cast<std::size_t>(efficiency)]; }
     constexpr const ModifierSet& forQuantity(Efficiency efficiency) const { return efficiency_modifiers[static_cast<std::size_t>(efficiency)]; }
+
+    constexpr ModifierSet& forQuantity(Power power) { return power_modifiers[static_cast<std::size_t>(power)]; }
+    constexpr const ModifierSet& forQuantity(Power power) const { return power_modifiers[static_cast<std::size_t>(power)]; }
 };
 
-/* Ids are '<resource>.<rate-or-capacity>.<source>' and
-   'efficiency.<efficiency>.<source>', built from the enums above, plus three
-   that stand alone. No table lists them; find() and all() generate them. */
+/* Ids are '<resource>.<rate-or-capacity>.<source>',
+   'efficiency.<efficiency>.<source>' and 'power.<power>.<source>', built from
+   the enums above, plus three that stand alone. No table lists them; find() and all() generate them. */
 namespace ModifierIds {
 
 struct Found {

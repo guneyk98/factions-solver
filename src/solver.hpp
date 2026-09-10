@@ -16,7 +16,7 @@ struct Info {
     double (*read)(const Output&);
 };
 
-inline constexpr std::size_t Count = 15;
+inline constexpr std::size_t Count = 18;
 
 std::span<const Info> all();
 const Info* find(std::string_view id);

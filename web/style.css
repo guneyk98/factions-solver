@@ -19,6 +19,7 @@
   --workers: #d7bd8a;
   --soldiers: #e59a9a;
   --efficiency: #c2a8e0;
+  --power: #e0b98a;
 
   --col-left: 256px;
   --col-board: 726px;
@@ -569,7 +570,8 @@ kbd {
 
 .goal-list:not(.weighed) .goal {
   cursor: grab;
-  touch-action: none; /* a drag down the list must not scroll the panel */
+  touch-action: none;
+  /* a drag down the list must not scroll the panel */
   user-select: none;
 }
 
@@ -1371,6 +1373,10 @@ details.panel summary h2 {
   color: var(--efficiency);
 }
 
+.power-value {
+  color: var(--power);
+}
+
 /* ---------- settings ---------- */
 
 .setting+.setting {
@@ -1524,6 +1530,10 @@ details.panel summary h2 {
 
 .fx-soldiers {
   --fx: var(--soldiers);
+}
+
+.fx-power {
+  --fx: var(--power);
 }
 
 .fx-list {

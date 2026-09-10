@@ -21,10 +21,10 @@ constexpr std::array<std::string_view, static_cast<std::size_t>(Quantity::Count)
     "defense",
     "map_efficiency",
     "worker_project_efficiency",
-    "market_tax",
-    "efficiency",
     "knightPower",
     "guardianPower",
+    "market_tax",
+    "efficiency",
     "recycling",
     "specialization",
 };

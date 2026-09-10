@@ -35,6 +35,10 @@ constexpr std::array Table{
     // The wood and iron above, less the market tax.
     Info{"wood.production.market", "market wood production", [](const Output& output) { return output.market.wood; }},
     Info{"iron.production.market", "market iron production", [](const Output& output) { return output.market.iron; }},
+
+    Info{"power.support", "base support power", [](const Output& output) { return powerOf(output, Power::Support); }},
+    Info{"power.knight", "knight power", [](const Output& output) { return powerOf(output, Power::Knight); }},
+    Info{"power.guardian", "guardian power", [](const Output& output) { return powerOf(output, Power::Guardian); }},
 };
 
 consteval bool objectivesAreWellFormed()
@@ -57,6 +61,7 @@ consteval bool everyObjectiveReadsADistinctQuantity()
     probe.production = {1, 2, 3, 4};
     probe.storage = {5, 6, 7, 8};
     probe.efficiency = {9, 10, 11, 12, 13};
+    probe.power = {14, 15, 16};
     probe.market = {0.5, 11, 12};
 
     for (std::size_t a = 0; a < Table.size(); ++a)

@@ -154,6 +154,14 @@ std::optional<Found> find(GameModifiers& modifiers, std::string_view id)
         return efficiency ? std::optional{found(modifiers.forQuantity(*efficiency))} : std::nullopt;
     }
 
+    if (part[0] == Powers::Field) {
+        if (ModifierSources::resourceOnly(*source))
+            return std::nullopt;
+
+        const std::optional<Power> power = Powers::tryFromId(part[1]);
+        return power ? std::optional{found(modifiers.forQuantity(*power))} : std::nullopt;
+    }
+
     const std::optional<Resource> resource = Resources::tryFromId(part[0]);
     const std::optional<RateOrCapacity> rateOrCapacity = RateOrCapacities::tryFromId(part[1]);
     if (!resource || !rateOrCapacity)
@@ -189,6 +197,9 @@ std::vector<Described> all()
 
     for (const Efficiency efficiency : Enum::values<Efficiency>())
         describeEverySource(Efficiencies::Field, Efficiencies::toId(efficiency), true);
+
+    for (const Power power : Enum::values<Power>())
+        describeEverySource(Powers::Field, Powers::toId(power), true);
 
     return described;
 }

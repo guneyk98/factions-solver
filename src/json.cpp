@@ -119,6 +119,17 @@ std::string of(const Output& output, const ProductionDetail& detail, const AuraD
     appendEfficiencies(out, Efficiencies::scalesWorkers, [&](Efficiency efficiency) { return effectiveWorkers(output, efficiency); });
 
     out += "}}";
+
+    out += ",\"power\":{";
+    {
+        bool first = true;
+        for (const Power power : Enum::values<Power>()) {
+            std::format_to(std::back_inserter(out), "{}\"{}\":{:.10g}", first ? "" : ",", Powers::toId(power), powerOf(output, power));
+            first = false;
+        }
+    }
+    out += '}';
+
     std::format_to(std::back_inserter(out), ",\"market\":{{\"tax\":{:.10g},\"wood\":{:.10g},\"iron\":{:.10g}}}", output.market.tax, output.market.wood, output.market.iron);
 
     out += ",\"global\":{";

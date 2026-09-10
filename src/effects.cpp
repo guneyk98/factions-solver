@@ -18,9 +18,6 @@ namespace {
    hall beside the centre and check whether its wood per tick increases. */
 constexpr std::string_view CentreCategory = "ECONOMY";
 
-/* The api names more quantities than this engine counts: knight and guardian
-   recruits, market and build orders, and six world-map ratings. Only the four
-   resources reach an Output. */
 std::optional<Resource> resourceFor(Game::Quantity quantity)
 {
     switch (quantity) {
@@ -32,8 +29,6 @@ std::optional<Resource> resourceFor(Game::Quantity quantity)
     }
 }
 
-/* The world ratings a building contributes to, as shares rather than as
-   anything produced or stored. Efficiency::Worker has no building source. */
 std::optional<Efficiency> efficiencyFor(Game::Quantity quantity)
 {
     switch (quantity) {
@@ -41,6 +36,15 @@ std::optional<Efficiency> efficiencyFor(Game::Quantity quantity)
     case Game::Quantity::Defense: return Efficiency::Defense;
     case Game::Quantity::MapEfficiency: return Efficiency::Map;
     case Game::Quantity::WorkerProjectEfficiency: return Efficiency::Projects;
+    default: return std::nullopt;
+    }
+}
+
+std::optional<Power> powerFor(Game::Quantity quantity)
+{
+    switch (quantity) {
+    case Game::Quantity::KnightPower: return Power::Knight;
+    case Game::Quantity::GuardianPower: return Power::Guardian;
     default: return std::nullopt;
     }
 }
@@ -505,6 +509,7 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
        percent more wood), so the building has no base of its own to multiply. */
     double taxReduction = 0.0;
     std::array<double, Enum::Count<Efficiency>> efficiencyRatings{};
+    std::array<double, Enum::Count<Power>> powerRatings{};
     std::array<std::array<double, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> sharesFromBuildings{};
     std::array<std::array<double, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> multipliersFromBuildings{};
 
@@ -537,6 +542,10 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
             }
             if (const std::optional<Efficiency> efficiency = efficiencyFor(quantity)) {
                 efficiencyRatings[static_cast<std::size_t>(*efficiency)] += value;
+                continue;
+            }
+            if (const std::optional<Power> power = powerFor(quantity)) {
+                powerRatings[static_cast<std::size_t>(*power)] += value;
                 continue;
             }
 
@@ -648,6 +657,24 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
         const ModifierSet& set = modifiers.forQuantity(efficiency);
         const double quests = Efficiencies::scaledByQuests(efficiency) ? questMultiplier : 1.0;
         output.efficiency[efficiencyIndex] = set.multiplier(efficiencyRatings[efficiencyIndex]) * quests + set.addedAfterMultiplier() - 1;
+    }
+
+    /* Each power is BasePower scaled by its own shares and factors and by the
+       support power's, which count towards knight and guardian power alike.*/
+    {
+        const ModifierSet& support = modifiers.forQuantity(Power::Support);
+        const auto supportIndex = static_cast<std::size_t>(Power::Support);
+
+        for (const Power power : Enum::values<Power>()) {
+            const auto powerIndex = static_cast<std::size_t>(power);
+            const ModifierSet& set = modifiers.forQuantity(power);
+
+            const bool alsoSupport = !Powers::countsTowardsBoth(power);
+            const double shares = powerRatings[powerIndex] + set.shares() + (alsoSupport ? powerRatings[supportIndex] + support.shares() : 0.0);
+            const double factors = set.factors() * (alsoSupport ? support.factors() : 1.0);
+
+            output.power[powerIndex] = BasePower * (1.0 + shares) * factors * questMultiplier + set.addedAfterMultiplier();
+        }
     }
 
     output.market.tax = std::max(0.0, rules.marketTax() - modifiers.marketTaxReduction - taxReduction);
