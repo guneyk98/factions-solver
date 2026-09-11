@@ -49,6 +49,15 @@ std::optional<Power> powerFor(Game::Quantity quantity)
     }
 }
 
+std::optional<Unit> unitFor(Game::Quantity quantity)
+{
+    switch (quantity) {
+    case Game::Quantity::Knight: return Unit::Knight;
+    case Game::Quantity::Guardian: return Unit::Guardian;
+    default: return std::nullopt;
+    }
+}
+
 // Game::RateOrCapacity has a third value, Both, which resolves to Rate here:
 // an aura over both is applied when the rate is multiplied.
 RateOrCapacity resolveRateOrCapacity(Game::RateOrCapacity rateOrCapacity)
@@ -510,6 +519,8 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
     double taxReduction = 0.0;
     std::array<double, Enum::Count<Efficiency>> efficiencyRatings{};
     std::array<double, Enum::Count<Power>> powerRatings{};
+    std::array<double, Enum::Count<Unit>> unitShares{};
+    std::array<double, Enum::Count<Unit>> unitMultipliers{};
     std::array<std::array<double, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> sharesFromBuildings{};
     std::array<std::array<double, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> multipliersFromBuildings{};
 
@@ -546,6 +557,21 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
             }
             if (const std::optional<Power> power = powerFor(quantity)) {
                 powerRatings[static_cast<std::size_t>(*power)] += value;
+                continue;
+            }
+
+            if (const std::optional<Unit> unit = unitFor(quantity)) {
+                const auto unitIndex = static_cast<std::size_t>(*unit);
+
+                if (!running.hasBaseOfItsOwn()) {
+                    if (running.fromAdjacency)
+                        continue;
+                    unitShares[unitIndex] += multipliedByAuras(running.perLevelShares, quantity, rateOrCapacity, cells, count) + running.flatShares;
+                    unitMultipliers[unitIndex] += multipliedByAuras(running.multiplier - 1.0, quantity, rateOrCapacity, cells, count);
+                    continue;
+                }
+
+                output.units[unitIndex] += value;
                 continue;
             }
 
@@ -675,6 +701,13 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
 
             output.power[powerIndex] = BasePower * (1.0 + shares) * factors * questMultiplier + set.addedAfterMultiplier();
         }
+    }
+
+    for (const Unit unit : Enum::values<Unit>()) {
+        const auto unitIndex = static_cast<std::size_t>(unit);
+        const ModifierSet& set = modifiers.forQuantity(unit);
+
+        output.units[unitIndex] = output.units[unitIndex] * set.multiplier(unitShares[unitIndex]) * (1.0 + unitMultipliers[unitIndex]) * questMultiplier + set.addedAfterMultiplier();
     }
 
     output.market.tax = std::max(0.0, rules.marketTax() - modifiers.marketTaxReduction - taxReduction);

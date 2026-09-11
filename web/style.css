@@ -637,6 +637,16 @@ kbd {
   font-size: 12px;
 }
 
+.unit-choice {
+  min-width: 0;
+  flex: 1;
+}
+
+.unit-choice button {
+  padding: 5px 0;
+  font-size: 12px;
+}
+
 .goal-add select:disabled,
 #add-goal:disabled {
   opacity: 0.5;

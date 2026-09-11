@@ -96,9 +96,9 @@
           <select id="worker-mode"></select>
         </label>
         <label class="goal-reading">
-          <span>Power means <span class="help"
-              title="Optimise base support power, or knight/guardian power.">?</span></span>
-          <select id="power-mode"></select>
+          <span>Power and /t <span class="help"
+              title="Which of the two the power goal and the /t goal below are read for.">?</span></span>
+          <div class="choice unit-choice" id="unit-choice"></div>
         </label>
         <label class="checkbox goal-mode">
           <input type="checkbox" id="goal-market"> Wood/t and Iron/t after market tax
@@ -190,10 +190,10 @@
       <!-- One row per combat efficiency, built from the engine's list. -->
       <ul class="fx-list fx-soldiers" id="effective-soldiers-list"></ul>
 
-      <h4 class="fx-head fx-power">Power</h4>
-      <!-- One row per power the engine carries; support power is counted in
-           both of the others as well as shown on its own. -->
-      <ul class="fx-list fx-power" id="power-list"></ul>
+      <h4 class="fx-head fx-power">Support</h4>
+      <!-- Each unit's power, then its production. Both power rows include the
+           support power, which has no row of its own. -->
+      <ul class="fx-list fx-power" id="support-list"></ul>
 
       <h4 class="fx-head fx-village">Village</h4>
       <ul class="fx-list fx-village">
@@ -244,13 +244,13 @@
         </div>
 
         <div class="modifier-group">
-          <h3>Power
+          <h3>Support
             <span class="help"
-              title="Shares and factors on knight and guardian power. Support power counts towards both.">?</span>
+              title="Shares and factors on knight and guardian power and production. Support power is added to both powers.">?</span>
           </h3>
           <div class="modifier-scroll">
             <table class="modifier-table">
-              <tbody id="modifier-power"></tbody>
+              <tbody id="modifier-support"></tbody>
             </table>
           </div>
         </div>

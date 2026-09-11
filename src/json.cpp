@@ -130,6 +130,16 @@ std::string of(const Output& output, const ProductionDetail& detail, const AuraD
     }
     out += '}';
 
+    out += ",\"units\":{";
+    {
+        bool first = true;
+        for (const Unit unit : Enum::values<Unit>()) {
+            std::format_to(std::back_inserter(out), "{}\"{}\":{:.10g}", first ? "" : ",", Units::toId(unit), unitsOf(output, unit));
+            first = false;
+        }
+    }
+    out += '}';
+
     std::format_to(std::back_inserter(out), ",\"market\":{{\"tax\":{:.10g},\"wood\":{:.10g},\"iron\":{:.10g}}}", output.market.tax, output.market.wood, output.market.iron);
 
     out += ",\"global\":{";

@@ -54,13 +54,11 @@ BUILDING_FIELDS = (
 )
 
 
-# Which sections and subtypes of an effects reply carry a modifier column.
-# The same set EFFECT_COLUMNS names in web/app.js: production and storage per
-# resource, and world for the efficiencies and the two powers, whose subtypes
-# the api spells out. Support power has no subtype of its own: the api reports
-# what it grants inside both knightPower and guardianPower.
+# Which sections and subtypes of an effects reply carry a modifier column: the
+# same set EFFECT_COLUMNS names in web/app.js. Support power has no subtype of
+# its own, since the api adds it into both knightPower and guardianPower.
 EFFECT_SECTIONS = {
-    'production': ('wood', 'iron', 'workers', 'soldiers'),
+    'production': ('wood', 'iron', 'workers', 'soldiers', 'knight', 'guardian'),
     'storage': ('wood', 'iron', 'workers', 'soldiers'),
     'world': ('attack', 'defense', 'worker', 'map_efficiency', 'worker_project_efficiency',
               'knightPower', 'guardianPower'),

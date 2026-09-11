@@ -154,12 +154,19 @@ std::optional<Found> find(GameModifiers& modifiers, std::string_view id)
         return efficiency ? std::optional{found(modifiers.forQuantity(*efficiency))} : std::nullopt;
     }
 
-    if (part[0] == Powers::Field) {
+    if (const std::optional<Power> power = Powers::tryFromId(part[0]); power && part[1] == Powers::Field) {
         if (ModifierSources::resourceOnly(*source))
             return std::nullopt;
 
-        const std::optional<Power> power = Powers::tryFromId(part[1]);
-        return power ? std::optional{found(modifiers.forQuantity(*power))} : std::nullopt;
+        return found(modifiers.forQuantity(*power));
+    }
+
+    if (const std::optional<Unit> unit = Units::tryFromId(part[0]); unit && part[1] == Units::Field) {
+        // The api puts no terrain, improvement or shrine row on either.
+        if (ModifierSources::resourceOnly(*source))
+            return std::nullopt;
+
+        return found(modifiers.forQuantity(*unit));
     }
 
     const std::optional<Resource> resource = Resources::tryFromId(part[0]);
@@ -199,7 +206,10 @@ std::vector<Described> all()
         describeEverySource(Efficiencies::Field, Efficiencies::toId(efficiency), true);
 
     for (const Power power : Enum::values<Power>())
-        describeEverySource(Powers::Field, Powers::toId(power), true);
+        describeEverySource(Powers::toId(power), Powers::Field, true);
+
+    for (const Unit unit : Enum::values<Unit>())
+        describeEverySource(Units::toId(unit), Units::Field, true);
 
     return described;
 }

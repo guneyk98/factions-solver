@@ -36,9 +36,12 @@ constexpr std::array Table{
     Info{"wood.production.market", "market wood production", [](const Output& output) { return output.market.wood; }},
     Info{"iron.production.market", "market iron production", [](const Output& output) { return output.market.iron; }},
 
-    Info{"power.support", "base support power", [](const Output& output) { return powerOf(output, Power::Support); }},
-    Info{"power.knight", "knight power", [](const Output& output) { return powerOf(output, Power::Knight); }},
-    Info{"power.guardian", "guardian power", [](const Output& output) { return powerOf(output, Power::Guardian); }},
+    /* Support power is not listed: it is a modifier the two below both
+       include, not a quantity an arrangement changes. */
+    Info{"knight.power", "knight power", [](const Output& output) { return powerOf(output, Power::Knight); }},
+    Info{"guardian.power", "guardian power", [](const Output& output) { return powerOf(output, Power::Guardian); }},
+    Info{"knight.production", "knight production", [](const Output& output) { return unitsOf(output, Unit::Knight); }},
+    Info{"guardian.production", "guardian production", [](const Output& output) { return unitsOf(output, Unit::Guardian); }},
 };
 
 consteval bool objectivesAreWellFormed()
@@ -62,6 +65,7 @@ consteval bool everyObjectiveReadsADistinctQuantity()
     probe.storage = {5, 6, 7, 8};
     probe.efficiency = {9, 10, 11, 12, 13};
     probe.power = {14, 15, 16};
+    probe.units = {17, 18};
     probe.market = {0.5, 11, 12};
 
     for (std::size_t a = 0; a < Table.size(); ++a)

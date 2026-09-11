@@ -99,6 +99,8 @@ void write(std::ostream& to)
        << "  efficiencyField: " << quoted(Efficiencies::Field) << ",\n"
        << "  powers: " << names(Powers::Ids) << ",\n"
        << "  powerField: " << quoted(Powers::Field) << ",\n"
+       << "  units: " << names(Units::Ids) << ",\n"
+       << "  unitField: " << quoted(Units::Field) << ",\n"
        << "  politicsField: " << quoted(PoliticsChoices::Field) << ",\n";
 
     to << "  modifierSources: [\n";
