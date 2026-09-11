@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <format>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -115,11 +116,32 @@ std::string cameFrom(const httplib::Request& request)
     return request.remote_addr.empty() ? "-" : request.remote_addr;
 }
 
+/* Control bytes written as \xNN. httplib percent-decodes the path before this
+   sees it, so a request for `/%0A<6>...` would otherwise put a real newline
+   into the logged line, and since each line is read from the front for a
+   <N> priority, a client could forge journal entries at a level of its
+   choosing. Everything below 0x20 and DEL is escaped so one request stays one
+   line. */
+std::string oneLine(std::string_view text)
+{
+    std::string out;
+    out.reserve(text.size());
+    for (const unsigned char byte : text) {
+        if (byte < 0x20 || byte == 0x7f)
+            std::format_to(std::back_inserter(out), "\\x{:02x}", byte);
+        else
+            out += static_cast<char>(byte);
+    }
+    return out;
+}
+
 // The request target, query string included, since it distinguishes requests
-// that share a path.
+// that share a path. params_to_query_str re-encodes the query, so only the
+// decoded path can carry a control byte into the log.
 std::string target(const httplib::Request& request)
 {
-    return request.params.empty() ? request.path : request.path + '?' + httplib::detail::params_to_query_str(request.params);
+    const std::string path = oneLine(request.path);
+    return request.params.empty() ? path : path + '?' + httplib::detail::params_to_query_str(request.params);
 }
 
 // A static file is streamed rather than buffered in the body, so its size is
