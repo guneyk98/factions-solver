@@ -43,7 +43,7 @@ import urllib.request
 
 API = 'https://api.factions-online.com/api'
 EARLIEST = 48
-# event_type values that denote a season. Each season change multiplies every
+# event_type values that denote a season. Each season, the first included, multiplies every
 # building and village cost multiplier by 0.99, so which season a round is in
 # decides what anything costs to upgrade.
 SEASONS = ('SPRING', 'SUMMER', 'FALL', 'AUTUMN', 'WINTER')
@@ -178,9 +178,9 @@ def seasons_of(token, gid):
     """The round's seasons in order, and the index of the current one.
 
     The index comes from the api rather than from comparing clocks: exactly one
-    season is started and not ended. It is returned because the cost
-    multipliers fetched alongside it are the ones that season charges, so the
-    page costs any other season relative to this index.
+    season is started and not ended. It is returned as the season the page
+    costs by default; hq/config's multipliers are the round's own, before any
+    season.
 
     A finished round returns no events, which is why this is offered only for
     an ongoing round.

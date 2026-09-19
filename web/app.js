@@ -1940,9 +1940,9 @@ function applyModifiers(fields) {
 
 /* ------------------------------- seasons -------------------------------
 
-   Each season change multiplies every cost multiplier by SCHEMA.seasonCostStep
-   (0.99). The engine stores the multiplier as of game.seasonNow and scales it
-   by 0.99^(season - seasonNow); this only chooses which season to send. */
+   Each season multiplies every cost multiplier by SCHEMA.seasonCostStep
+   (0.99), counting the first: the engine charges the round's own multiplier
+   times 0.99^(season + 1). This only chooses which season to send. */
 
 const seasonField = document.getElementById('season-field');
 const seasonSelect = document.getElementById('season-select');
@@ -1985,8 +1985,8 @@ function renderSeasons() {
 
   const baseline = GAME_BY_ID.get(state.game)?.seasonNow ?? -1;
   for (let i = 0; i < seasons.length; i += 1) {
-    // Cost multiplier relative to the season the multipliers were fetched in.
-    const step = baseline < 0 ? 1 : SCHEMA.seasonCostStep ** (i - baseline);
+    // Cost multiplier over the round's own.
+    const step = baseline < 0 ? 1 : SCHEMA.seasonCostStep ** (i + 1);
     const factor = step === 1 ? '' : ` · ×${step.toFixed(3).replace(/0+$/, '')}`;
     addOption(seasonSelect, String(i), `${i + 1}. ${seasonName(seasons[i])}${i === now ? ' (now)' : ''}${factor}`);
   }

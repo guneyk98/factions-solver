@@ -5,19 +5,6 @@
 
 namespace Factions {
 
-/* Build and upgrade costs, which are independent of what a village produces.
-   The solver never calls this, so none of it is on runEffects' path: a cost is
-   computed once per edit for the page, not once per arrangement.
-
-   cost(level) = floor(base * (growth * multiplier * season)^level)
-
-   `growth` is fixed per game; `multiplier` is per resource and per game, held
-   in its Config; `season` is SeasonCostStep^(season - Config::seasonNow).
-   Verified against 5112 building costs and 86 village costs from the api
-   across eight rounds: all match exactly.
-
-   A game's multiplier is the one its fetched season charges. Pass `season` to
-   cost against a different one, or -1 for the fetched one. */
 namespace Cost {
 
 // Per-level growth factor, before the game's own multiplier.

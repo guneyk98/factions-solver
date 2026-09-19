@@ -133,9 +133,6 @@ struct Season {
     std::string_view end;
 };
 
-/* Every season change multiplies each cost multiplier by this. Confirmed by
-   dividing it out once, which reproduced every cost recorded before the
-   round's first season change. */
 inline constexpr double SeasonCostStep = 0.99;
 
 struct Config {
@@ -157,15 +154,10 @@ struct Config {
     std::span<const std::string_view> terrain; // width * height, row major
     std::span<const Building> buildings;
 
-    /* The seasons in order, and the index of the one current when the cost
-       multipliers above were fetched. Another season is costed relative to
-       that index rather than from a count of elapsed seasons, since the api
-       need not list them all. Empty, or -1, disables season scaling. */
     std::span<const Season> seasons;
     int seasonNow;
 };
 
-// SeasonCostStep^(season - seasonNow), or 1 where the game has no seasons.
 double seasonStep(const Config& game, int season);
 
 std::span<const Config> all();

@@ -59,13 +59,10 @@ constexpr std::array<std::string_view, static_cast<std::size_t>(Shape::Count)> S
 
 double seasonStep(const Config& game, int season)
 {
-    /* Only the distance from seasonNow matters, so an index past the end of
-       the recorded list is still costed: the api reveals future seasons a few
-       at a time and a planner may look further ahead than that. */
-    if (game.seasonNow < 0 || season < 0)
+    if (game.seasonNow < 0)
         return 1.0;
 
-    return std::pow(SeasonCostStep, season - game.seasonNow);
+    return std::pow(SeasonCostStep, (season < 0 ? game.seasonNow : season) + 1);
 }
 
 std::string_view name(Quantity quantity) { return QuantityNames[static_cast<std::size_t>(quantity)]; }
