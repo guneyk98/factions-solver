@@ -168,7 +168,7 @@ def main():
     files = sorted((f for f in GAMES.glob('*.json') if f.name != 'index.json'),
                    key=lambda f: int(f.stem), reverse=True)
     if not files:
-        raise SystemExit(f'no games in {GAMES}; run tools/fetch-games.py')
+        raise SystemExit(f'no games in {GAMES}; run tools/fetch-games.py --rules')
 
     pool = Strings()
     dropped = []

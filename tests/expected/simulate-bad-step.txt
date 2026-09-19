@@ -1,0 +1,1 @@
+!step on line 3 (0 build 4,7): expected 'build <x>,<y> <building> [orientation]'

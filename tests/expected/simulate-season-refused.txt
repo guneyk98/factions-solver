@@ -1,0 +1,1 @@
+!a script prices by the season its tick falls in, so 'season' cannot be set

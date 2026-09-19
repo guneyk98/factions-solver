@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <limits>
 #include <cmath>
 #include <format>
 #include <optional>
@@ -278,6 +279,288 @@ std::expected<SearchLimits, Error> effort(std::string_view spec)
     }
 
     return limits;
+}
+
+namespace {
+
+// The line that ends the village section and begins the steps.
+constexpr std::string_view StepsMarker = "steps";
+
+std::optional<std::size_t> tileIndex(std::string_view text)
+{
+    const std::vector<std::string_view> part = Text::split(text, ',');
+    if (part.size() != 2)
+        return std::nullopt;
+
+    const std::optional<int> x = number<int>(part[0]);
+    const std::optional<int> y = number<int>(part[1]);
+    if (!x || !y || !isInside(*x, *y))
+        return std::nullopt;
+
+    return Village::index(static_cast<std::size_t>(*x), static_cast<std::size_t>(*y));
+}
+
+/* One 'name=value' the simulator owns rather than the village grammar.
+   `taken` says whether it was one of those. */
+std::optional<Error> takeSetting(ParsedScript& script, std::string_view name, std::string_view text, bool& taken)
+{
+    taken = true;
+
+    const auto whole = [&](int least, int most, int& into) -> std::optional<Error> {
+        const std::optional<int> value = number<int>(text);
+        if (!value || *value < least || *value > most)
+            return Error{std::format("{} of '{}' must be a whole number from {} to {}", name, text, least, most)};
+        into = *value;
+        return std::nullopt;
+    };
+
+    const auto amount = [&](double most, double& into) -> std::optional<Error> {
+        const std::optional<double> value = number<double>(text);
+        if (!value || *value < 0.0 || *value > most)
+            return Error{std::format("{} of '{}' must be a number from 0 to {:.0f}", name, text, most)};
+        into = *value;
+        return std::nullopt;
+    };
+
+    if (name == "tick")
+        return whole(0, static_cast<int>(MaxSetting), script.setup.tick);
+    if (name == "until")
+        return whole(0, static_cast<int>(MaxSetting), script.until);
+    if (name == "tier")
+        return whole(1, Simulate::TierCount, script.setup.tier);
+
+    const std::size_t dot = name.find('.');
+    const std::string_view group = name.substr(0, dot);
+    const std::string_view which = dot == std::string_view::npos ? std::string_view{} : name.substr(dot + 1);
+
+    if (group == "stock") {
+        const std::optional<Resource> resource = Resources::tryFromId(which);
+        if (!resource)
+            return Error{std::format("unknown stock '{}'; expected one of {}", which, listed(Resources::Ids))};
+        // A refund can take a store above its capacity, so nothing bounds this.
+        return amount(std::numeric_limits<double>::max(), script.setup.stock.resource[*resource]);
+    }
+
+    if (group == "charge") {
+        const std::optional<Unit> unit = Units::tryFromId(which);
+        if (!unit)
+            return Error{std::format("unknown charge '{}'; expected one of {}", which, listed(Units::Ids))};
+        return amount(Simulate::FullCharge, script.setup.stock.charge[static_cast<std::size_t>(*unit)]);
+    }
+
+    if (group == "seals") {
+        const std::optional<Seal> seal = Seals::tryFromId(which);
+        if (!seal || *seal == Seal::None)
+            return Error{std::format("unknown seal '{}'", which)};
+
+        int count = 0;
+        if (std::optional<Error> trouble = whole(0, static_cast<int>(Simulate::MaxSeals), count))
+            return trouble;
+        script.setup.sealsStored[static_cast<std::size_t>(*seal)] = count;
+        return std::nullopt;
+    }
+
+    taken = false;
+    return std::nullopt;
+}
+
+// One step line: '<tick> <action> [arguments]'.
+std::expected<Simulate::Step, Error> takeStep(std::string_view line, std::size_t atLine)
+{
+    const std::vector<std::string_view> word = Text::words(line);
+
+    const auto malformed = [&](std::string_view what) {
+        return fail(std::format("step on line {} ({}): {}", atLine, line, what));
+    };
+
+    if (word.size() < 2)
+        return malformed("expected a tick and an action");
+
+    const std::optional<int> tick = number<int>(word[0]);
+    if (!tick || *tick < 0)
+        return malformed(std::format("'{}' is not a tick", word[0]));
+
+    const std::optional<Simulate::Action> action = Simulate::actionFromName(word[1]);
+    if (!action)
+        return malformed(std::format("unknown action '{}'", word[1]));
+
+    Simulate::Step step;
+    step.tick = *tick;
+    step.action = *action;
+
+    const auto arguments = std::span{word}.subspan(2);
+
+    const auto takeOrientation = [&step](std::string_view text) -> std::optional<std::string> {
+        const std::optional<Orientation> facing = text.size() == 1 ? Orientations::tryFromChar(text[0]) : std::nullopt;
+        if (!facing)
+            return std::format("'{}' is not an orientation", text);
+        step.orientation = *facing;
+        return std::nullopt;
+    };
+
+    switch (*action) {
+    case Simulate::Action::Build: {
+        if (arguments.size() < 2 || arguments.size() > 3)
+            return malformed("expected 'build <x>,<y> <building> [orientation]'");
+
+        const std::optional<std::size_t> tile = tileIndex(arguments[0]);
+        if (!tile)
+            return malformed(std::format("'{}' is not a tile", arguments[0]));
+        const std::optional<Building> building = Buildings::tryFromId(arguments[1]);
+        if (!building)
+            return malformed(std::format("unknown building '{}'", arguments[1]));
+
+        step.tile = *tile;
+        step.building = *building;
+        if (arguments.size() == 3)
+            if (std::optional<std::string> wrong = takeOrientation(arguments[2]))
+                return malformed(*wrong);
+        break;
+    }
+
+    case Simulate::Action::Upgrade:
+    case Simulate::Action::Destroy:
+    case Simulate::Action::DetachSeal: {
+        if (arguments.size() != 1)
+            return malformed(std::format("expected '{} <x>,<y>'", Simulate::name(*action)));
+
+        const std::optional<std::size_t> tile = tileIndex(arguments[0]);
+        if (!tile)
+            return malformed(std::format("'{}' is not a tile", arguments[0]));
+        step.tile = *tile;
+        break;
+    }
+
+    case Simulate::Action::Move: {
+        if (arguments.size() < 2 || arguments.size() > 3)
+            return malformed("expected 'move <x>,<y> <x>,<y> [orientation]'");
+
+        const std::optional<std::size_t> from = tileIndex(arguments[0]);
+        const std::optional<std::size_t> to = tileIndex(arguments[1]);
+        if (!from || !to)
+            return malformed("expected two tiles, the one moved from and the one moved to");
+
+        step.from = *from;
+        step.tile = *to;
+        if (arguments.size() == 3)
+            if (std::optional<std::string> wrong = takeOrientation(arguments[2]))
+                return malformed(*wrong);
+        break;
+    }
+
+    case Simulate::Action::UpgradeVillage:
+        if (!arguments.empty())
+            return malformed("'village' takes no arguments");
+        break;
+
+    case Simulate::Action::AttachSeal: {
+        if (arguments.size() != 2)
+            return malformed("expected 'seal <seal> <x>,<y>'");
+
+        const std::optional<Seal> seal = Seals::tryFromId(arguments[0]);
+        if (!seal || *seal == Seal::None)
+            return malformed(std::format("unknown seal '{}'", arguments[0]));
+        const std::optional<std::size_t> tile = tileIndex(arguments[1]);
+        if (!tile)
+            return malformed(std::format("'{}' is not a tile", arguments[1]));
+
+        step.seal = *seal;
+        step.tile = *tile;
+        break;
+    }
+
+    default:
+        return malformed("no such action");
+    }
+
+    return step;
+}
+
+} // namespace
+
+std::expected<ParsedScript, Error> script(std::string_view text)
+{
+    ParsedScript parsed;
+
+    std::string village;
+    std::vector<std::pair<std::string_view, std::size_t>> steps;
+    bool afterMarker = false;
+
+    std::size_t lineNumber = 0;
+    for (std::size_t at = 0; at <= text.size();) {
+        const std::size_t end = std::min(text.find('\n', at), text.size());
+        const std::string_view line = text.substr(at, end - at);
+        at = end + 1;
+        ++lineNumber;
+
+        const std::vector<std::string_view> word = Text::words(line);
+
+        if (!word.empty() && word.front().front() == '#')
+            continue;
+
+        if (!afterMarker && word.size() == 1 && word.front() == StepsMarker) {
+            afterMarker = true;
+            continue;
+        }
+
+        if (!afterMarker) {
+            village += line;
+            village += '\n';
+        } else if (!word.empty()) {
+            steps.emplace_back(line, lineNumber);
+        }
+
+        if (end == text.size())
+            break;
+    }
+
+    std::string forVillage;
+    bool untilGiven = false;
+    for (const std::string_view token : Text::words(village)) {
+        const std::size_t equals = token.find('=');
+        if (equals != std::string_view::npos) {
+            const std::string_view name = token.substr(0, equals);
+            if (name == "season")
+                return fail("a script prices by the season its tick falls in, so 'season' cannot be set");
+
+            bool taken = false;
+            if (std::optional<Error> trouble = takeSetting(parsed, name, token.substr(equals + 1), taken))
+                return std::unexpected{*trouble};
+            if (taken) {
+                untilGiven = untilGiven || name == "until";
+                continue;
+            }
+        }
+
+        forVillage += token;
+        forVillage += ' ';
+    }
+
+    std::expected<ParsedVillage, Error> start = Parse::village(forVillage);
+    if (!start)
+        return std::unexpected{start.error()};
+    parsed.start = *start;
+
+    std::size_t seals = 0;
+    for (std::size_t i = 0; i < Village::Width * Village::Height; ++i)
+        seals += parsed.start.village[i].seal != Seal::None ? 1 : 0;
+    for (const int held : parsed.setup.sealsStored)
+        seals += static_cast<std::size_t>(held);
+
+    if (seals > Simulate::MaxSeals)
+        return fail(std::format("{} seals, fitted and stored together, is more than the {} a run tracks", seals, Simulate::MaxSeals));
+
+    for (const auto& [line, atLine] : steps) {
+        const std::expected<Simulate::Step, Error> step = takeStep(line, atLine);
+        if (!step)
+            return std::unexpected{step.error()};
+        parsed.steps.push_back(*step);
+    }
+
+    if (!untilGiven)
+        parsed.until = parsed.steps.empty() ? parsed.setup.tick : parsed.steps.back().tick;
+
+    return parsed;
 }
 
 } // namespace Parse

@@ -6,12 +6,16 @@ out="${1:-$root/build/site}"
 
 mkdir -p "$out"
 
-# -flto optimises across the nine translation units at link rather than each
+# -flto optimises across the ten translation units at link rather than each
 # on its own, which measured faster than -O3 alone and is what the timings in
 # tools/tune.py and tools/wasm-bench.js were taken with.
-em++ -O3 -flto -std=c++23 -I "$root/src" -I "$(dirname "${GAMES_CPP:-$root/build/games.gen.cpp}")" -Wall -Wextra -pedantic -Werror \
+# -DNDEBUG because this build is both what the page ships and what
+# tools/wasm-bench.js times: asserts have no business in either. The checked
+# build is HarnessChecked, native. See CMakeLists.
+em++ -O3 -flto -DNDEBUG -std=c++23 -I "$root/src" -I "$(dirname "${GAMES_CPP:-$root/build/games.gen.cpp}")" -Wall -Wextra -pedantic -Werror \
     -o "$out/engine.js" \
     "$root/src/wasm.cpp" "$root/src/parse.cpp" "$root/src/json.cpp" "$root/src/game.cpp" "$root/src/solver.cpp" \
+    "$root/src/simulate.cpp" \
     "$root/src/village.cpp" "$root/src/effects.cpp" "$root/src/cost.cpp" "${GAMES_CPP:-$root/build/games.gen.cpp}" \
     -s MODULARIZE=1 \
     -s EXPORT_NAME=createEngine \
@@ -19,7 +23,7 @@ em++ -O3 -flto -std=c++23 -I "$root/src" -I "$(dirname "${GAMES_CPP:-$root/build
     -s ENVIRONMENT=web,worker,node \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s INITIAL_MEMORY=16MB \
-    -s EXPORTED_FUNCTIONS='["_apiParse","_apiProduction","_apiRearrange","_apiFree","_malloc","_free"]' \
+    -s EXPORTED_FUNCTIONS='["_apiParse","_apiProduction","_apiRearrange","_apiSimulate","_apiFree","_malloc","_free"]' \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","stringToNewUTF8"]' \
     --closure 0
 

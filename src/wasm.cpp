@@ -6,6 +6,7 @@
 #include "parse.hpp"
 #include "json.hpp"
 #include "effects.hpp"
+#include "simulate.hpp"
 #include "solver.hpp"
 #include "village.hpp"
 
@@ -81,6 +82,21 @@ char* apiRearrange(const char* text, const char* goal, const char* effort)
 
     const std::span<const Goal> goals{wanted->goals};
     return release(Json::of(rearrange(parsed->modifiers, parsed->village, goals, wanted->ranking, *limits, parsed->game), goals, wanted->ranking));
+}
+
+/* Replays a simulator script and returns the run: every step with what it cost
+   and what followed it, and the whole production block for the state it
+   finished in. */
+EMSCRIPTEN_KEEPALIVE
+char* apiSimulate(const char* text)
+{
+    const auto parsed = Parse::script(text);
+    if (!parsed)
+        return reject(parsed.error().message);
+
+    const Rules& rules = Rules::of(parsed->start.game);
+    const Simulate::Report report = Simulate::replay(rules, parsed->start.modifiers, parsed->start.village, parsed->setup, parsed->steps, parsed->until);
+    return release(Json::of(report, rules, parsed->start.modifiers));
 }
 
 } // extern "C"

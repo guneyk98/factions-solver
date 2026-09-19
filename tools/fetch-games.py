@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
-"""Pulls the per-game building rules and village terrain into data/games/.
+"""Writes the per-game building rules, village terrain and villages into data/.
 
 The api wants a bearer token and sends no CORS headers, so the page cannot ask
 it anything itself. This runs once at your shell and writes what the build
 reads. data/ is not in version control, so a fresh checkout needs one run of
 this before it can be built.
 
-    FACTIONS_TOKEN=... tools/fetch-games.py
+Nothing is fetched unless asked for, because the rules the api currently
+returns are wrong in places and a run that refreshed them by default would
+overwrite a corrected data/games with them again:
+
+    tools/fetch-games.py --rules-from tmp/config     # rules off saved replies
+    FACTIONS_TOKEN=... tools/fetch-games.py --rules  # rules off the api
+    FACTIONS_TOKEN=... tools/fetch-games.py --players
+    tools/fetch-games.py --index                     # index.json only
+
+--rules-from reads the hq/config replies saved as <dir>/config-<game>.json and
+writes the same files --rules would, without the network and without a token.
+Whatever only hq/info and events/list carry (terrain, seasons) is kept from the
+data/games file already there, since a saved config does not hold it.
 
 The token is read from the environment and never written anywhere. Neither is
 anything else the api returns about you: hq/info carries your faction, level
@@ -19,9 +31,11 @@ reports over it, in the same trimmed shape the console script in web/app.js
 produces, so the page reads both through modifiersFromEffects.
 """
 
+import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 import urllib.error
@@ -217,20 +231,108 @@ def players_of(token, gid, on_grid):
     return out
 
 
-def main():
-    token = os.environ.get('FACTIONS_TOKEN', '').strip()
-    if not token:
-        raise SystemExit('set FACTIONS_TOKEN to a bearer token for api.factions-online.com')
+def rules(gid, config, game, before):
+    """The data/games file for one round.
 
-    games = [g for g in get(token, 'games/list') if g.get('id', 0) >= EARLIEST]
-    games.sort(key=lambda g: g['id'], reverse=True)
-    print(f'{len(games)} games from {EARLIEST} up', flush=True)
+    `game` is its games/list entry, `before` what data/games already holds for
+    it. Everything hq/config does not carry (terrain, seasons, and the
+    games/list columns) is taken from `game` where it is there and from
+    `before` otherwise, so rebuilding rules off a saved config keeps it.
+    """
+    misc = config.get('misc') or {}
+    params = misc.get('parameters') or {}
+    mode = config.get('modeConfig') or {}
+    hq_upgrade = misc.get('hqUpgrade') or {}
 
+    one = {
+        # What the market takes before a village haggles it down, as a
+        # percentage. misc.marketTax, per game.
+        'marketTax': misc.get('marketTax'),
+        # Scales the world-map bonus near your hq, not anything on the
+        # village grid. Carried so it is visible rather than assumed.
+        'homeBonusMultiplier': params.get('home_bonus_multiplier'),
+        'resourceMultiplier': mode.get('resource_multiplier'),
+        'storageMultiplier': mode.get('storage_multiplier'),
+        # What each level of a building, and of the village, costs.
+        # A cost grows geometrically with the level it is paid at, and
+        # each game rolls its own multiplier per resource; the arithmetic
+        # is in src/cost.hpp.
+        'cost': {
+            'building': {
+                'wood': params.get('building_wood_cost_multiplier'),
+                'iron': params.get('building_iron_cost_multiplier'),
+                'workers': params.get('building_worker_cost_multiplier'),
+            },
+            'village': {
+                'wood': params.get('hq_wood_cost_multiplier'),
+                'iron': params.get('hq_iron_cost_multiplier'),
+                'workers': params.get('hq_worker_cost_multiplier'),
+            },
+            'villageBase': hq_upgrade.get('baseCost') or {},
+            'villageWorkersStart': hq_upgrade.get('workersStart'),
+        },
+        'id': gid,
+        'map': game.get('map') or before.get('map') or '',
+        'type': game.get('type') or before.get('type') or '',
+        # PLAYING, COMPLETED, and so on. Only PLAYING rounds may be
+        # queried for their players; see tools/games-to-cpp.py.
+        'status': game.get('status') or before.get('status') or '',
+        'buildings': [trim(b) for b in config['buildings']],
+    }
+    for carried in ('seasons', 'seasonNow', 'width', 'height', 'terrain'):
+        if carried in before:
+            one[carried] = before[carried]
+    return one
+
+
+def written(gid):
+    """What data/games already holds for a round, or {}."""
+    path = HERE / f'{gid}.json'
+    return json.loads(path.read_text()) if path.exists() else {}
+
+
+def store(one):
+    (HERE / f'{one["id"]}.json').write_text(json.dumps(one, indent=1, sort_keys=True) + '\n')
+    if one.get('terrain'):
+        print(f'  {one["id"]:4} {one["map"]:14} {one["width"]}x{one["height"]} '
+              f'{len(one["buildings"])} buildings', flush=True)
+    else:
+        print(f'  {one["id"]:4} not started yet, rules only '
+              f'({len(one["buildings"])} buildings), no terrain', flush=True)
+
+
+def index():
+    """Rewrites data/games/index.json off every rules file now written.
+
+    A round without terrain has not started and is left out, as the page has
+    nothing to draw for it.
+    """
     HERE.mkdir(parents=True, exist_ok=True)
-    index = []
-    # What stands on each round's grid, for effects() to tell a village-wide
-    # source from one the page computes off the board.
-    on_grid = {}
+    listed = []
+    for path in sorted(HERE.glob('*.json')):
+        if path.name == 'index.json':
+            continue
+        one = json.loads(path.read_text())
+        if one.get('terrain'):
+            listed.append({'id': one['id'], 'map': one.get('map') or '',
+                           'type': one.get('type') or ''})
+    listed.sort(key=lambda g: g['id'], reverse=True)
+    (HERE / 'index.json').write_text(json.dumps(listed, indent=1) + '\n')
+    print(f'wrote {len(listed)} games into {HERE}')
+
+
+def wanted(games, only):
+    """The games/list entries asked for, newest first."""
+    chosen = [g for g in games if g.get('id', 0) >= EARLIEST
+              and (not only or g['id'] in only)]
+    chosen.sort(key=lambda g: g['id'], reverse=True)
+    return chosen
+
+
+def fetch_rules(token, only):
+    games = wanted(get(token, 'games/list'), only)
+    print(f'{len(games)} games', flush=True)
+    HERE.mkdir(parents=True, exist_ok=True)
 
     for game in games:
         gid = game['id']
@@ -246,73 +348,36 @@ def main():
         except SystemExit:
             info = {}
 
+        one = rules(gid, config, game, written(gid))
         terrain = info.get('grid', {}).get('terrain')
-
-        misc = config.get('misc') or {}
-        params = misc.get('parameters') or {}
-        mode = config.get('modeConfig') or {}
-        hq_upgrade = misc.get('hqUpgrade') or {}
-
-        one = {
-            # What the market takes before a village haggles it down, as a
-            # percentage. misc.marketTax, per game.
-            'marketTax': misc.get('marketTax'),
-            # Scales the world-map bonus near your hq, not anything on the
-            # village grid. Carried so it is visible rather than assumed.
-            'homeBonusMultiplier': params.get('home_bonus_multiplier'),
-            'resourceMultiplier': mode.get('resource_multiplier'),
-            'storageMultiplier': mode.get('storage_multiplier'),
-            # What each level of a building, and of the village, costs.
-            # A cost grows geometrically with the level it is paid at, and
-            # each game rolls its own multiplier per resource; the arithmetic
-            # is in src/cost.hpp.
-            'cost': {
-                'building': {
-                    'wood': params.get('building_wood_cost_multiplier'),
-                    'iron': params.get('building_iron_cost_multiplier'),
-                    'workers': params.get('building_worker_cost_multiplier'),
-                },
-                'village': {
-                    'wood': params.get('hq_wood_cost_multiplier'),
-                    'iron': params.get('hq_iron_cost_multiplier'),
-                    'workers': params.get('hq_worker_cost_multiplier'),
-                },
-                'villageBase': hq_upgrade.get('baseCost') or {},
-                'villageWorkersStart': hq_upgrade.get('workersStart'),
-            },
-            'id': gid,
-            'map': game.get('map') or '',
-            'type': game.get('type') or '',
-            # PLAYING, COMPLETED, and so on. Only PLAYING rounds may be
-            # queried for their players; see tools/games-to-cpp.py.
-            'status': game.get('status') or '',
-            'buildings': [trim(b) for b in config['buildings']],
-        }
-        on_grid[gid] = {b['name'] for b in config['buildings']} | {'HQ'}
-        # Only an ongoing round has seasons; a finished one returns no events
-        # and keeps the cost multipliers it ended on.
-        one['seasons'], one['seasonNow'] = seasons_of(token, gid)
-
         if terrain:
             one['width'] = len(terrain[0])
             one['height'] = len(terrain)
             one['terrain'] = terrain
+        # Only an ongoing round has seasons; a finished one returns no events
+        # and keeps the cost multipliers it ended on.
+        one['seasons'], one['seasonNow'] = seasons_of(token, gid)
+        store(one)
 
-        (HERE / f'{gid}.json').write_text(json.dumps(one, indent=1, sort_keys=True) + '\n')
-        if terrain:
-            index.append({'id': gid, 'map': one['map'], 'type': one['type']})
-            print(f'  {gid:4} {one["map"]:14} {one["width"]}x{one["height"]} '
-                  f'{len(one["buildings"])} buildings', flush=True)
-        else:
-            print(f'  {gid:4} not started yet, rules only ({len(one["buildings"])} buildings), '
-                  'no terrain', flush=True)
 
-    (HERE / 'index.json').write_text(json.dumps(index, indent=1) + '\n')
-    print(f'wrote {len(index)} games into {HERE}')
+def saved_rules(where, only):
+    """Rewrites the rules off hq/config replies saved as config-<game>.json."""
+    found = {}
+    for path in sorted(where.glob('config-*.json')):
+        gid = int(re.fullmatch(r'config-(\d+)', path.stem).group(1))
+        if not only or gid in only:
+            found[gid] = path
+    if not found:
+        raise SystemExit(f'no config-<game>.json in {where}')
 
-    if '--no-players' in sys.argv:
-        return
+    print(f'{len(found)} games from {where}', flush=True)
+    HERE.mkdir(parents=True, exist_ok=True)
+    for gid in sorted(found, reverse=True):
+        config = json.loads(found[gid].read_text())
+        store(rules(gid, config, {}, written(gid)))
 
+
+def fetch_players(token, only):
     # Finished games let anyone's village be looked at, so they are offered as
     # starting points. Kept apart from the rules: the page fetches these only
     # when asked rather than carrying all of them.
@@ -321,14 +386,60 @@ def main():
     # so a file of them would be a snapshot of a moment rather than of how the
     # round was played, and the page says as much when it finds none.
     PLAYERS.mkdir(parents=True, exist_ok=True)
-    for game in games:
+    for game in wanted(get(token, 'games/list'), only):
         gid = game['id']
         if game.get('status') != FINISHED:
-            print(f'  {gid:4} still {(game.get("status") or "unknown").lower()}, no villages written', flush=True)
+            print(f'  {gid:4} still {(game.get("status") or "unknown").lower()}, '
+                  'no villages written', flush=True)
             continue
-        found = players_of(token, gid, on_grid.get(gid, {'HQ'}))
+        # What stands on this round's grid, for effects() to tell a
+        # village-wide source from one the page computes off the board.
+        on_grid = {b['name'] for b in written(gid).get('buildings', [])} | {'HQ'}
+        found = players_of(token, gid, on_grid)
         (PLAYERS / f'{gid}.json').write_text(json.dumps(found, separators=(',', ':')) + '\n')
         print(f'  {gid:4} {len(found):3} villages', flush=True)
+
+
+def token_of():
+    token = os.environ.get('FACTIONS_TOKEN', '').strip()
+    if not token:
+        raise SystemExit('set FACTIONS_TOKEN to a bearer token for api.factions-online.com')
+    return token
+
+
+def main():
+    parse = argparse.ArgumentParser(
+        description='Writes game rules and villages into data/. Nothing is '
+                    'fetched unless asked for.')
+    parse.add_argument('--rules', action='store_true',
+                       help='fetch each round\'s building rules and terrain into data/games')
+    parse.add_argument('--rules-from', metavar='DIR', type=pathlib.Path,
+                       help='rewrite the rules off hq/config replies saved as '
+                            'DIR/config-<game>.json, without the api')
+    parse.add_argument('--players', action='store_true',
+                       help='fetch the villages of finished rounds into data/players')
+    parse.add_argument('--index', action='store_true',
+                       help='rewrite data/games/index.json off the rules already written')
+    parse.add_argument('--game', metavar='ID', type=int, action='append', dest='games',
+                       help='act on this round only; repeat for several '
+                            '(default: every round from {EARLIEST} up)'.format(EARLIEST=EARLIEST))
+    args = parse.parse_args()
+
+    if not (args.rules or args.rules_from or args.players or args.index):
+        parse.error('nothing to do: pass --rules, --rules-from, --players or --index')
+    if args.rules and args.rules_from:
+        parse.error('--rules and --rules-from both write data/games; pass one')
+
+    only = set(args.games or ())
+
+    if args.rules:
+        fetch_rules(token_of(), only)
+    if args.rules_from:
+        saved_rules(args.rules_from, only)
+    if args.rules or args.rules_from or args.index:
+        index()
+    if args.players:
+        fetch_players(token_of(), only)
 
 
 if __name__ == '__main__':

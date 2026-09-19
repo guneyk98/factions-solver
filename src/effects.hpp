@@ -55,6 +55,8 @@ public:
         return effects_[static_cast<std::size_t>(b)];
     }
 
+    const Game::Building* describes(Building b) const { return describes_[static_cast<std::size_t>(b)]; }
+
     // Every aura in this game, in the order of their grids.
     std::span<const Aura> auras() const { return auras_; }
 
@@ -110,6 +112,7 @@ private:
 
     const Game::Config* game_;
 
+    std::array<const Game::Building*, Enum::Count<Building>> describes_{};
     std::array<Game::Shape, Enum::Count<Building>> shape_{};
     std::array<std::span<const Game::Effect>, Enum::Count<Building>> effects_{};
     std::array<std::array<int, MaxEffects>, Enum::Count<Building>> aura_of_{};

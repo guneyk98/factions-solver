@@ -232,6 +232,97 @@ std::string of(const SearchResult& found, std::span<const Goal> goals, Ranking r
     return out;
 }
 
+namespace {
+
+// Named values in enum order, as one object.
+template <typename E, typename Value>
+void appendByEnum(std::string& out, std::string_view name, std::string_view (*idOf)(E), const Value& valueOf)
+{
+    std::format_to(std::back_inserter(out), "\"{}\":{{", name);
+    bool first = true;
+    for (const E which : Enum::values<E>()) {
+        std::format_to(std::back_inserter(out), "{}\"{}\":{:.10g}", first ? "" : ",", idOf(which), static_cast<double>(valueOf(which)));
+        first = false;
+    }
+    out += '}';
+}
+
+void appendState(std::string& out, std::string_view name, const Simulate::State& state)
+{
+    std::format_to(std::back_inserter(out), "\"{}\":{{\"tick\":{},\"season\":{},\"villageLevel\":{},\"slotsUsed\":{},\"recycling\":{:.10g},", name, state.tick, state.season, state.villageLevel, state.slotsUsed, state.recycling);
+
+    appendTotals(out, "stock", state.stock.resource);
+    out += ',';
+    appendTotals(out, "production", state.production);
+    out += ',';
+    appendTotals(out, "capacity", state.capacity);
+    out += ',';
+    appendByEnum<Unit>(out, "charge", Units::toId, [&](Unit unit) { return state.stock.charge[static_cast<std::size_t>(unit)]; });
+    out += ',';
+    appendByEnum<Unit>(out, "unitProduction", Units::toId, [&](Unit unit) { return state.unitProduction[static_cast<std::size_t>(unit)]; });
+    out += ',';
+    appendByEnum<Seal>(out, "sealsStored", Seals::toId, [&](Seal seal) { return state.sealsStored[static_cast<std::size_t>(seal)]; });
+    out += ',';
+    appendByEnum<Seal>(out, "sealReadyAt", Seals::toId, [&](Seal seal) { return state.sealReadyAt[static_cast<std::size_t>(seal)]; });
+    out += '}';
+}
+
+void appendStep(std::string& out, const Simulate::Step& step)
+{
+    // A step that acts on the village rather than a tile, and one with no
+    // tile it came from, are written as null.
+    std::format_to(std::back_inserter(out), "{{\"tick\":{},\"action\":\"{}\",\"tile\":{},\"from\":{},\"building\":\"{}\",\"level\":{},\"orientation\":\"{}\",\"seal\":\"{}\",", step.tick, Simulate::name(step.action), step.tile >= Simulate::NoTile ? std::string{"null"} : std::to_string(step.tile), step.from >= Simulate::NoTile ? std::string{"null"} : std::to_string(step.from), Buildings::toId(step.building), step.level, Orientations::toChar(step.orientation), Seals::toId(step.seal));
+
+    appendResources(out, "paid", step.paid);
+    out += ',';
+    appendResources(out, "refunded", step.refunded);
+    out += ',';
+    appendState(out, "after", step.after);
+    out += '}';
+}
+
+std::string escaped(std::string_view text)
+{
+    std::string out;
+    for (const char c : text) {
+        if (c == '"' || c == '\\')
+            out += '\\';
+        out += c;
+    }
+    return out;
+}
+
+} // namespace
+
+std::string of(const Simulate::Report& report, const Rules& rules, const GameModifiers& modifiers)
+{
+    std::string out = "{";
+    appendState(out, "start", report.start);
+
+    out += ",\"steps\":[";
+    for (std::size_t s = 0; s < report.steps.size(); ++s) {
+        if (s > 0)
+            out += ',';
+        appendStep(out, report.steps[s]);
+    }
+    out += "],";
+
+    if (report.refusal.empty())
+        out += "\"refusal\":null,\"refusedAt\":null,";
+    else
+        std::format_to(std::back_inserter(out), "\"refusal\":\"{}\",\"refusedAt\":{},", escaped(report.refusal), report.refusedAt);
+
+    appendState(out, "end", report.end);
+
+    ProductionDetail detail;
+    AuraDetail auras;
+    const Output output = runEffects(rules, modifiers, report.village, &detail, &auras);
+
+    out += ",\"village\":" + of(report.village);
+    out += ",\"production\":" + of(output, detail, auras, rules.game(), report.village, report.end.season);
+    return out + '}';
+}
+
 } // namespace Json
 
 } // namespace Factions

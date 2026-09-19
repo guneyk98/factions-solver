@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="darkreader-lock">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Village Simulator</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+  <header class="topbar">
+    <div class="wrap">
+      <h1>Village Simulator</h1>
+
+      <a class="page-link" href="/">&#8592; Planner</a>
+
+      <label class="field">
+        Game
+        <select id="game-select" title="Sets the terrain and every cost"></select>
+      </label>
+
+      <label class="field">
+        Tier
+        <select id="tier-select"
+          title="The highest build-menu tier unlocked"></select>
+      </label>
+
+      <div class="field">
+        Tick
+        <span id="tick-now" class="count">0</span>
+      </div>
+
+      <div class="field">
+        Season
+        <span id="season-now" class="count">0</span>
+      </div>
+
+      <div class="field">
+        Slots
+        <span id="slot-count" class="count">0 / 1</span>
+      </div>
+
+      <span id="status" class="status" role="status"></span>
+
+      <button type="button" id="reset" title="Discard the run">Start over</button>
+    </div>
+  </header>
+
+  <main class="wrap sim-layout">
+    <aside class="panel run-bar" id="run-bar"></aside>
+
+    <aside class="panel sidebar">
+      <div class="view-tabs">
+        <button type="button" class="view-tab" id="view-build" data-view="build" aria-pressed="true">Build</button>
+        <button type="button" class="view-tab" id="view-start" data-view="start" aria-pressed="false">Start</button>
+        <span class="help" id="view-help" title="">?</span>
+      </div>
+
+      <section id="build-view">
+        <div class="tier-tabs" id="tier-tabs"></div>
+        <div class="palette-grid" id="building-palette"></div>
+
+        <div class="place-bottom" id="place-bottom">
+          <p class="hint rotate-hint" id="rotate-hint" hidden></p>
+          <h3 class="sim-head">Seals held</h3>
+          <div class="seal-store" id="seal-store"></div>
+        </div>
+      </section>
+
+      <section id="start-view" hidden>
+        <label class="field sim-field">
+          First tick
+          <input type="number" id="start-tick" min="0" step="1" value="0">
+        </label>
+
+        <h3 class="sim-head">Held at that tick</h3>
+        <div class="sim-stock-fields" id="start-stock"></div>
+
+        <h3 class="sim-head">Seals owned</h3>
+        <div class="sim-stock-fields" id="start-seals"></div>
+
+        <div class="sim-actions">
+          <button type="button" id="import-planner">Take the planner's village</button>
+          <button type="button" id="saves-open">Load a saved village…</button>
+        </div>
+        <p class="hint" id="import-note"></p>
+      </section>
+    </aside>
+
+    <section class="board">
+      <div class="board-bar">
+        <label class="field sim-field">
+          Ticks
+          <input type="number" id="wait-ticks" min="1" step="1" value="100">
+        </label>
+        <button type="button" id="wait" title="Advance the clock by the ticks shown">Wait</button>
+        <button type="button" id="wait-affordable" title="Advance to when the selected cost is affordable"
+          disabled>Wait for it</button>
+        <div class="board-bar-end">
+          <button type="button" id="undo-step" title="Remove the last step" disabled>&#8630; Remove last step</button>
+          <button type="button" id="runs-open">Save / load…</button>
+          <button type="button" id="share-open">Export / import…</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="hint" id="board-note" hidden></p>
+    </section>
+
+    <div class="side-column">
+      <aside class="panel inspector">
+        <p class="empty" id="insp-empty">Click a tile.</p>
+        <div id="insp-body" hidden>
+          <div class="tile-head" id="insp-basics"></div>
+          <div class="sim-actions" id="insp-actions"></div>
+          <div class="seal-picker" id="insp-seals" hidden>
+            <span class="hint">Seal</span>
+            <div class="seal-buttons" id="seal-buttons"></div>
+          </div>
+          <div id="insp-detail"></div>
+        </div>
+      </aside>
+    </div>
+
+
+    <aside class="panel sim-steps">
+      <div class="replay-bar">
+        <h3 class="sim-head">Steps</h3>
+        <span class="replay-where" id="replay-where"></span>
+        <div class="replay-buttons">
+          <button type="button" id="replay-start" title="First step">&#124;&#9664;</button>
+          <button type="button" id="replay-back" title="Previous step">&#9664;</button>
+          <button type="button" id="replay-forward" title="Next step">&#9654;</button>
+          <button type="button" id="replay-end" title="Last step">&#9654;&#124;</button>
+        </div>
+      </div>
+      <div class="step-head">
+        <span>Tick</span>
+        <span>Action</span>
+        <span>On</span>
+        <span>From</span>
+        <span>To</span>
+        <span>Cost</span>
+        <span></span>
+      </div>
+      <p class="empty" id="steps-empty">No steps yet.</p>
+      <ol class="step-list" id="step-list"></ol>
+      <p class="hint refusal" id="refusal" hidden></p>
+    </aside>
+
+    <aside class="panel stats">
+      <h4 class="fx-head fx-wood">Wood</h4>
+      <ul class="fx-list fx-wood">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-wood" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value wood-value"
+            id="total-wood">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-wood" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-wood">0</span></li>
+        <li><span class="fx-what">sold</span><span class="fx-value" id="market-wood"
+            title="After the market's cut">0</span></li>
+      </ul>
+
+      <h4 class="fx-head fx-iron">Iron</h4>
+      <ul class="fx-list fx-iron">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-iron" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value iron-value"
+            id="total-iron">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-iron" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-iron">0</span></li>
+        <li><span class="fx-what">sold</span><span class="fx-value" id="market-iron"
+            title="After the market's cut">0</span></li>
+      </ul>
+
+      <h4 class="fx-head fx-workers">Workers</h4>
+      <ul class="fx-list fx-workers">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-workers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value workers-value"
+            id="total-workers">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-workers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-workers">0</span></li>
+      </ul>
+      <!-- One row per worker efficiency, built from the engine's list. -->
+      <ul class="fx-list fx-workers" id="effective-workers-list"></ul>
+
+      <h4 class="fx-head fx-soldiers">Soldiers</h4>
+      <ul class="fx-list fx-soldiers">
+        <li><span class="fx-what">/t</span><span class="total-global" id="global-production-soldiers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value soldiers-value"
+            id="total-soldiers">0</span></li>
+        <li><span class="fx-what">cap</span><span class="total-global" id="global-storage-soldiers" hidden
+            title="Village-wide bonus, already counted"></span><span class="fx-value" id="store-soldiers">0</span></li>
+      </ul>
+      <!-- One row per combat efficiency, built from the engine's list. -->
+      <ul class="fx-list fx-soldiers" id="effective-soldiers-list"></ul>
+
+      <h4 class="fx-head fx-power">Support</h4>
+      <!-- Each unit's power, then its production. Both power rows include the
+           support power, which has no row of its own. -->
+      <ul class="fx-list fx-power" id="support-list"></ul>
+
+      <h4 class="fx-head fx-village">Village</h4>
+      <ul class="fx-list fx-village">
+        <li><span class="fx-what">tax</span><span class="fx-value" id="market-tax">40%</span></li>
+      </ul>
+      <!-- And one per efficiency the engine carries, likewise. -->
+      <ul class="fx-list fx-village" id="efficiency-list"></ul>
+
+      <h4 class="fx-head fx-cost">Cost</h4>
+      <ul class="fx-list fx-cost">
+        <li><span class="fx-what">wood</span><span class="fx-value wood-value" id="cost-wood">0</span></li>
+        <li><span class="fx-what">iron</span><span class="fx-value iron-value" id="cost-iron">0</span></li>
+        <li><span class="fx-what">workers</span><span class="fx-value workers-value" id="cost-workers">0</span></li>
+      </ul>
+    </aside>
+
+    <details class="panel modifiers" id="modifiers-panel">
+      <summary>
+        <h2>Game modifiers</h2>
+        <span class="hint" id="modifiers-summary">all neutral</span>
+      </summary>
+
+      <div class="modifiers-body">
+        <div class="modifier-group">
+          <h3>General</h3>
+          <div class="modifier-scalars" id="modifier-scalars"></div>
+        </div>
+
+        <div class="modifier-group modifier-group-wide">
+          <h3>Per resource</h3>
+          <div class="modifier-scroll">
+            <table class="modifier-table">
+              <tbody id="modifier-columns"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modifier-group">
+          <h3>Efficiency</h3>
+          <div class="modifier-scroll">
+            <table class="modifier-table">
+              <tbody id="modifier-efficiency"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modifier-group">
+          <h3>Support
+            <span class="help"
+              title="Shares and factors on knight and guardian power and production. Support power is added to both powers.">?</span>
+          </h3>
+          <div class="modifier-scroll">
+            <table class="modifier-table">
+              <tbody id="modifier-support"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modifier-group">
+          <h3>Market</h3>
+          <div class="modifier-scalars" id="modifier-market"></div>
+        </div>
+
+        <p class="modifiers-foot">
+          <button type="button" id="reset-modifiers">Reset all</button>
+        </p>
+      </div>
+    </details>
+  </main>
+
+  <div class="modal" id="runs-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="runs-title">
+      <div class="modal-head">
+        <h2 id="runs-title">Saved runs</h2>
+        <span class="help"
+          title="Kept in this browser: the starting village and every step from it">?</span>
+        <button type="button" class="modal-close" id="runs-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <form class="save-form" id="run-form">
+        <input type="text" id="run-name" class="save-name" maxlength="60" autocomplete="off" spellcheck="false"
+          placeholder="Name for the run on the board">
+        <button type="submit">Save</button>
+      </form>
+
+      <ul class="save-list" id="run-list"></ul>
+      <p class="hint save-note" id="runs-note"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="saves-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="saves-title">
+      <div class="modal-head">
+        <h2 id="saves-title">Saved villages</h2>
+        <span class="help"
+          title="The planner's saved layouts. Its buildings start standing, uncosted">?</span>
+        <button type="button" class="modal-close" id="saves-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <ul class="save-list" id="save-list"></ul>
+      <p class="hint save-note" id="saves-note"></p>
+    </div>
+  </div>
+
+  <div class="modal" id="share-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="share-title">
+      <div class="modal-head">
+        <h2 id="share-title">Export and import</h2>
+        <span class="help" title="The run as the engine reads it">?</span>
+        <button type="button" class="modal-close" id="share-close" data-close title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <textarea id="share-text" rows="10" spellcheck="false" autocomplete="off"
+        placeholder="Press Export to write the run here, or paste one in and press Import."></textarea>
+
+      <div class="share-actions">
+        <button type="button" id="share-export">Export</button>
+        <button type="button" id="share-copy">Copy</button>
+        <button type="button" id="share-import">Import</button>
+      </div>
+
+      <p class="hint" id="share-note"></p>
+    </div>
+  </div>
+
+  <script src="/schema.js"></script>
+  <script src="/common.js"></script>
+  <script src="/engine.js"></script>
+  <script src="/simulator.js"></script>
+</body>
+
+</html>

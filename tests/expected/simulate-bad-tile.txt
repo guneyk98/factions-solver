@@ -1,0 +1,1 @@
+!step on line 3 (0 build 40,7 WOODCUTTER): '40,7' is not a tile

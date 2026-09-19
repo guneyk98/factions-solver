@@ -8,14 +8,18 @@
 set -uo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-harness="$root/build/Harness"
+# The assert-enabled build: every check below runs with the engine's own
+# invariants live. build/Harness is the same code without them, for the
+# benchmarks. See CMakeLists.
+harness="$root/build/HarnessChecked"
 cases="$root/tests/cases"
+scripts="$root/tests/scripts"
 expected="$root/tests/expected"
 
 record=0
 [[ ${1:-} == --record ]] && record=1
 
-[[ -x $harness ]] || { echo "no build/Harness, run: cmake --build build" >&2; exit 1; }
+[[ -x $harness ]] || { echo "no build/HarnessChecked, run: cmake --build build" >&2; exit 1; }
 
 mkdir -p "$expected"
 
@@ -64,6 +68,11 @@ for file in "$cases"/*.txt; do
     name=$(basename "$file" .txt)
     check "production-$name" production "$file"
     check "parse-$name" parse "$file"
+done
+
+# Every simulator run: the rules a tick applies, and the refusals it gives.
+for file in "$scripts"/*.txt; do
+    check "simulate-$(basename "$file" .txt)" simulate "$file"
 done
 
 # Every modifier, and a check that all() and find() agree about each.
@@ -146,18 +155,79 @@ else
     printf 'skipping the split check: no python3\n'
 fi
 
-# The page starts up, both from empty storage and from whatever a previous
-# visit stored. Needs jsdom, which this project does not depend on:
+# Both pages start up, from empty storage and from whatever a previous visit
+# stored. Needs jsdom, which this project does not depend on:
 #   npm install --no-save jsdom
 if [[ -f $root/build/site/engine.js ]] && command -v node >/dev/null \
     && NODE_PATH="$root/node_modules" node -e "require('jsdom')" 2>/dev/null; then
-    if NODE_PATH="$root/node_modules" node "$root/tests/startup.js" build/site; then
+    for page in startup simulator; do
+        if NODE_PATH="$root/node_modules" node "$root/tests/$page.js" build/site; then
+            passed=$(( passed + 1 ))
+        else
+            failed=$(( failed + 1 ))
+        fi
+    done
+else
+    printf 'skipping the startup checks: no jsdom (npm install --no-save jsdom)\n'
+fi
+
+# The pointer itself: a drag, and a press that turns out to be a click. jsdom
+# can reach neither, so this drives a real Chrome over the debugging protocol.
+# Needs a browser and `ws`; skipped when either is missing.
+chrome=$(command -v google-chrome || command -v chromium || true)
+[[ -n $chrome ]] || chrome='/mnt/c/Program Files/Google/Chrome/Application/chrome.exe'
+
+if [[ -f $root/build/site/engine.js ]] && command -v node >/dev/null \
+    && [[ -f $chrome ]] \
+    && NODE_PATH="$root/node_modules" node -e "require('ws')" 2>/dev/null; then
+
+    profile="$root/build/pointer-profile"
+    rm -rf "$profile"
+    mkdir -p "$profile"
+    # A Windows chrome.exe cannot read a WSL path, and silently fails to start
+    # if given one, so hand it the Windows spelling of the same directory.
+    if [[ $chrome == *.exe ]] && command -v wslpath >/dev/null; then
+        profile=$(wslpath -w "$profile")
+    fi
+
+    # A browser already on the port would be attached to instead of the one
+    # started below, and the checks would be run against whatever it happens to
+    # be showing. That has produced failures that reproduce nowhere else.
+    if curl -s -m 1 -o /dev/null http://127.0.0.1:9223/json/version; then
+        printf 'ERROR pointer: something is already listening on port 9223\n' >&2
+        failed=$(( failed + 1 ))
+        printf '\n%d passed, %d failed\n' "$passed" "$failed"
+        exit 1
+    fi
+
+    "$root/build/Server" 8123 >/dev/null 2>&1 &
+    server=$!
+    "$chrome" --headless=new --disable-gpu --remote-debugging-port=9223 \
+        --user-data-dir="$profile" --window-size=1800,1000 \
+        "http://localhost:8123/simulator.html" >/dev/null 2>&1 &
+    browser=$!
+
+    # Waited for rather than slept through: a slow start would otherwise read
+    # as a failure of the page.
+    up=0
+    for _ in $(seq 40); do
+        if curl -s -m 1 -o /dev/null http://127.0.0.1:9223/json/version; then up=1; break; fi
+        sleep 0.5
+    done
+
+    if (( up == 0 )); then
+        printf 'ERROR pointer: the browser never opened its debugging port\n' >&2
+        failed=$(( failed + 1 ))
+    elif NODE_PATH="$root/node_modules" node "$root/tests/pointer.js" 9223; then
         passed=$(( passed + 1 ))
     else
         failed=$(( failed + 1 ))
     fi
+
+    kill $browser $server 2>/dev/null
+    wait $browser $server 2>/dev/null
 else
-    printf 'skipping the startup checks: no jsdom (npm install --no-save jsdom)\n'
+    printf 'skipping the pointer checks: no chrome, node or ws\n'
 fi
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"

@@ -42,7 +42,7 @@ file(GLOB GAME_DATA CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/games/*.j
 if(NOT GAME_DATA)
     message(FATAL_ERROR
         "No game rules in data/games. They are fetched rather than committed:\n"
-        "    FACTIONS_TOKEN=... tools/fetch-games.py\n"
+        "    FACTIONS_TOKEN=... tools/fetch-games.py --rules\n"
         "See the top of tools/fetch-games.py for what it reads and what it keeps.")
 endif()
 
@@ -63,6 +63,7 @@ set(ENGINE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cost.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/game.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/simulate.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/effects.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/village.cpp
     ${GAMES_CPP}
@@ -75,6 +76,7 @@ set(ENGINE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/effects.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/game.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/simulate.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/text.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/village.hpp
 )
@@ -82,9 +84,23 @@ set(ENGINE_HEADERS
 add_executable(Server src/server.cpp)
 target_link_libraries(Server PRIVATE httplib::httplib Threads::Threads)
 
-# The api under test. See tests/run.sh.
+# The api under test, built twice from the same sources.
+#
+# Harness keeps the Release NDEBUG, because it is also what the two benchmarks
+# time: `Harness bench` and tools/tune.py, which times `Harness rearrange`. An
+# assert on the path being measured would move the figures they exist to report.
+#
+# HarnessChecked undefines it, so every assert in the engine is live. It is
+# optimised the same way, so the checks are the only difference, and it is what
+# tests/run.sh drives.
 add_executable(Harness tests/harness.cpp ${ENGINE})
 target_include_directories(Harness PRIVATE src ${CMAKE_BINARY_DIR})
+
+add_executable(HarnessChecked tests/harness.cpp ${ENGINE})
+target_include_directories(HarnessChecked PRIVATE src ${CMAKE_BINARY_DIR})
+# After the Release flags rather than instead of them: -U undoes the -DNDEBUG
+# they carry, and nothing else about the build changes.
+target_compile_options(HarnessChecked PRIVATE -UNDEBUG)
 
 # What the page needs to know about the game, generated from the engine's own
 # tables so nothing is declared twice.
@@ -102,11 +118,11 @@ add_custom_command(
 )
 
 # Every script goes through terser on its way into the site.
-foreach(script IN ITEMS app schema)
-    if(script STREQUAL app)
-        set(from ${CMAKE_CURRENT_SOURCE_DIR}/web/app.js)
-    else()
+foreach(script IN ITEMS app common simulator schema)
+    if(script STREQUAL schema)
         set(from ${SCHEMA_JS})
+    else()
+        set(from ${CMAKE_CURRENT_SOURCE_DIR}/web/${script}.js)
     endif()
 
     add_custom_command(
@@ -143,19 +159,21 @@ add_custom_command(
 )
 list(APPEND SITE_OUTPUTS ${SITE}/players.stamp)
 
-# The page itself, with comments removed and whitespace collapsed as the
+# The pages themselves, with comments removed and whitespace collapsed as the
 # browser would render it anyway.
-add_custom_command(
-    OUTPUT ${SITE}/index.html
-    COMMAND ${CMAKE_COMMAND} -E env python3
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/minify-html.py
-            ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html ${SITE}/index.html
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/minify-html.py
-    COMMENT "Minifying index.html"
-    VERBATIM
-)
-list(APPEND SITE_OUTPUTS ${SITE}/index.html)
+foreach(page IN ITEMS index simulator)
+    add_custom_command(
+        OUTPUT ${SITE}/${page}.html
+        COMMAND ${CMAKE_COMMAND} -E env python3
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/minify-html.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/web/${page}.html ${SITE}/${page}.html
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/web/${page}.html
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/minify-html.py
+        COMMENT "Minifying ${page}.html"
+        VERBATIM
+    )
+    list(APPEND SITE_OUTPUTS ${SITE}/${page}.html)
+endforeach()
 
 foreach(file IN ITEMS style.css engine-worker.js)
     add_custom_command(
@@ -194,4 +212,5 @@ endif()
 
 target_compile_options(Server PRIVATE ${WARNINGS})
 target_compile_options(Harness PRIVATE ${WARNINGS})
+target_compile_options(HarnessChecked PRIVATE ${WARNINGS})
 target_compile_options(Schema PRIVATE ${WARNINGS})

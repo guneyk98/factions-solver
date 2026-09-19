@@ -16,6 +16,7 @@
 #include "json.hpp"
 #include "effects.hpp"
 #include "game.hpp"
+#include "simulate.hpp"
 #include "solver.hpp"
 #include "village.hpp"
 
@@ -248,6 +249,19 @@ int rearranged(const std::string& text, std::string_view goal, std::string_view 
     return 0;
 }
 
+// A simulator run, replayed from its script. See Parse::script.
+int simulate(const std::string& text)
+{
+    const auto parsed = Parse::script(text);
+    if (!parsed)
+        return reject(parsed.error().message);
+
+    const Rules& rules = Rules::of(parsed->start.game);
+    const Simulate::Report report = Simulate::replay(rules, parsed->start.modifiers, parsed->start.village, parsed->setup, parsed->steps, parsed->until);
+    std::cout << Json::of(report, rules, parsed->start.modifiers) << '\n';
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -255,7 +269,7 @@ int main(int argc, char** argv)
     const std::vector<std::string_view> args{argv + 1, argv + argc};
 
     if (args.empty()) {
-        std::cerr << "usage: harness <production|goals|effort|rearrange> ...\n";
+        std::cerr << "usage: harness <production|goals|effort|rearrange|simulate> ...\n";
         return 2;
     }
 
@@ -275,6 +289,8 @@ int main(int argc, char** argv)
         return modifiers();
     if (mode == "games" && args.size() == 1)
         return games();
+    if (mode == "simulate" && args.size() == 2)
+        return simulate(slurp(argv[2]));
     if (mode == "rearrange" && args.size() == 4)
         return rearranged(slurp(argv[2]), args[2], args[3]);
 

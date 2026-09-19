@@ -170,6 +170,7 @@ Rules::Rules(const Game::Config& config)
             continue; // a building this engine has no enum value for
 
         const auto buildingIndex = static_cast<std::size_t>(*building);
+        describes_[buildingIndex] = &described;
         shape_[buildingIndex] = described.shape;
         effects_[buildingIndex] = described.effects;
         indexEffectsByQuantity(*building, described.effects);

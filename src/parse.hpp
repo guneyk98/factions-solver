@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "simulate.hpp"
 #include "solver.hpp"
 #include "village.hpp"
 
@@ -55,6 +56,26 @@ std::expected<Goals, Error> goals(std::string_view spec);
 
 // 'name=value' settings, comma separated, over SearchLimits' defaults.
 std::expected<SearchLimits, Error> effort(std::string_view spec);
+
+// A simulator run: the village it starts from, what the player holds then,
+// and the steps taken from there.
+struct ParsedScript {
+    ParsedVillage start;
+    Simulate::Setup setup;
+    std::vector<Simulate::Step> steps;
+    // The tick the run is wound forward to once every step has been taken.
+    int until = 0;
+};
+
+/* The text form of a run: the village text, a line reading 'steps', then one
+   step per line as '<tick> <action> [arguments]'. The village section also
+   carries the simulator's own settings, which the village grammar does not
+   know: 'tick', 'until', 'tier', 'stock.<resource>', 'charge.<unit>' and
+   'seals.<seal>'. A line whose first word starts with '#' is a comment.
+
+   A script takes its season from the tick it has reached, so 'season' is
+   refused rather than ignored. */
+std::expected<ParsedScript, Error> script(std::string_view text);
 
 } // namespace Parse
 

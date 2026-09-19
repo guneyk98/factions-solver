@@ -4,6 +4,7 @@
 #include <string>
 
 #include "effects.hpp"
+#include "simulate.hpp"
 #include "solver.hpp"
 #include "village.hpp"
 
@@ -22,6 +23,10 @@ std::string of(const Output& output, const ProductionDetail& detail, const AuraD
 
 // A search result: what each goal reached, and the layout that reached it.
 std::string of(const SearchResult& found, std::span<const Goal> goals, Ranking ranking);
+
+// A simulator run: what the village held and produced at every step, plus the
+// production block for the state it finished in, so the page asks once.
+std::string of(const Simulate::Report& report, const Rules& rules, const GameModifiers& modifiers);
 
 /* A village in the form the page holds one, which is what parsing its text
    produces. Returning it keeps the grammar in one parser, so the page writes

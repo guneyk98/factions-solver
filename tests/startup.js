@@ -21,8 +21,9 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 
 const html = fs.readFileSync(path.join(site, 'index.html'), 'utf8');
 // Real script tags share one global lexical scope; jsdom's eval does not, so
-// the two files go in together the way the browser sees them.
-const bundle = `${fs.readFileSync(path.join(site, 'schema.js'), 'utf8')}\n${fs.readFileSync(path.join(site, 'app.js'), 'utf8')}`;
+// the page's scripts go in together, in load order, the way the browser sees
+// them.
+const bundle = ['schema.js', 'common.js', 'app.js'].map((f) => fs.readFileSync(path.join(site, f), 'utf8')).join('\n');
 const createEngine = require(path.join(site, 'engine.js'));
 
 // The engine's own description of what each building does, to check the page
@@ -436,7 +437,7 @@ async function main() {
           tools/fetch-games.py), so this takes the newest round that has. */
   const game = games.find((id) => fs.existsSync(path.join(site, 'players', `${id}.json`)));
   if (game === undefined) {
-    throw new Error(`no players/<game>.json under ${site}; run tools/fetch-games.py`);
+    throw new Error(`no players/<game>.json under ${site}; run tools/fetch-games.py --players`);
   }
   const villages = JSON.parse(fs.readFileSync(path.join(site, 'players', `${game}.json`), 'utf8'))
     // A village saved before a shape changed can no longer fit; picking one

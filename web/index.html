@@ -15,6 +15,8 @@
     <div class="wrap">
       <h1>Village Planner</h1>
 
+      <a class="page-link" href="/simulator.html" title="Play a round out tick by tick instead">Simulator &#8594;</a>
+
       <label class="field">
         Game
         <select id="game-select"
@@ -340,13 +342,13 @@
       </div>
 
       <form class="save-form" id="save-form">
-        <input type="text" id="save-name" maxlength="60" autocomplete="off" spellcheck="false"
+        <input type="text" id="save-name" class="save-name" maxlength="60" autocomplete="off" spellcheck="false"
           placeholder="Name for the layout on the board">
         <button type="submit">Save</button>
       </form>
 
       <ul class="save-list" id="save-list"></ul>
-      <p class="hint" id="saves-note"></p>
+      <p class="hint save-note" id="saves-note"></p>
     </div>
   </div>
 
@@ -425,6 +427,7 @@
   </div>
 
   <script src="/schema.js"></script>
+  <script src="/common.js"></script>
   <script src="/engine.js"></script>
   <script src="/app.js"></script>
 </body>
