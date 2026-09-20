@@ -1,2 +1,2 @@
 ranking=blended
-goal wood.production weight=0
+goal wood.production weight=0 atLeast=0

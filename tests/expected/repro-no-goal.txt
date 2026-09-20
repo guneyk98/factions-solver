@@ -1,0 +1,1 @@
+!no 'goal=' in the report; it names the goals the search ranked by

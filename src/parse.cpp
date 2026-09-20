@@ -224,20 +224,49 @@ std::expected<Goals, Error> goals(std::string_view spec)
 
     Goals goals;
     std::size_t weighted = 0;
+    std::size_t targeted = 0;
+    double targets = 0;
 
-    // 'id' or 'id:weight', separated by commas.
+    /* 'id', 'id:weight' or 'id=target', each optionally followed by
+       '>=minimum'. The minimum is cut off first, so the '=' it carries is
+       never taken for a target's. */
     for (const std::string_view term : Text::split(spec, ',')) {
-        const std::size_t colon = term.find(':');
-        const std::string_view id = term.substr(0, colon);
-        double weight = 1.0;
+        std::string_view head = term;
+        std::string_view minimum;
 
-        if (colon != std::string_view::npos) {
-            const std::string_view text = term.substr(colon + 1);
+        const std::size_t least = head.find(">=");
+        if (least != std::string_view::npos) {
+            minimum = head.substr(least + 2);
+            head = head.substr(0, least);
+        }
+
+        const std::size_t marked = head.find_first_of(":=");
+        const bool target = marked != std::string_view::npos && head[marked] == '=';
+        const std::string_view id = head.substr(0, marked);
+
+        double weight = 1.0;
+        double atLeast = 0.0;
+
+        if (marked != std::string_view::npos) {
+            const std::string_view text = head.substr(marked + 1);
             const std::optional<double> given = number<double>(text);
             if (!given || *given < 0)
-                return fail(std::format("goal '{}' has a weight of '{}', which must be a number of at least 0", id, text));
+                return fail(std::format("goal '{}' has a {} of '{}', which must be a number of at least 0", id, target ? "ratio target" : "weight", text));
+
             weight = *given;
-            ++weighted;
+            if (target) {
+                ++targeted;
+                targets += weight;
+            } else {
+                ++weighted;
+            }
+        }
+
+        if (least != std::string_view::npos) {
+            const std::optional<double> given = number<double>(minimum);
+            if (!given || *given < 0)
+                return fail(std::format("goal '{}' asks for at least '{}', which must be a number of at least 0", id, minimum));
+            atLeast = *given;
         }
 
         const Objective::Info* const info = Objective::find(id);
@@ -246,13 +275,21 @@ std::expected<Goals, Error> goals(std::string_view spec)
         if (std::ranges::any_of(goals.goals, [info](const Goal& goal) { return goal.objective == info; }))
             return fail(std::format("goal '{}' is named twice", id));
 
-        goals.goals.push_back(Goal{info, weight});
+        goals.goals.push_back(Goal{info, weight, atLeast});
     }
 
+    if (weighted != 0 && targeted != 0)
+        return fail("a goal carries either a weight or a ratio target, not one of each");
     if (weighted != 0 && weighted != goals.goals.size())
         return fail("either every goal carries a weight or none does");
+    if (targeted != 0 && targeted != goals.goals.size())
+        return fail("either every goal carries a ratio target or none does");
+    if (targeted != 0 && targets <= 0)
+        return fail("a ratio needs one goal with a target above 0");
 
-    goals.ranking = weighted == 0 ? Ranking::Lexicographic : Ranking::WeightedSum;
+    goals.ranking = targeted != 0 ? Ranking::Ratio
+        : weighted != 0           ? Ranking::WeightedSum
+                                  : Ranking::Lexicographic;
     return goals;
 }
 
@@ -309,6 +346,95 @@ std::expected<SearchLimits, Error> effort(std::string_view spec)
     }
 
     return limits;
+}
+
+namespace {
+
+/* The line that ends the search a report describes and begins the layout it
+   found. */
+constexpr std::string_view FoundMarker = "found";
+
+} // namespace
+
+std::expected<ParsedRepro, Error> repro(std::string_view text)
+{
+    std::string_view goalSpec;
+    std::string_view effortSpec;
+    bool goalGiven = false;
+    bool effortGiven = false;
+
+    std::string forVillage;
+    std::string forFound;
+    bool afterMarker = false;
+
+    for (std::size_t at = 0; at <= text.size();) {
+        const std::size_t end = std::min(text.find('\n', at), text.size());
+        const std::string_view line = text.substr(at, end - at);
+        at = end + 1;
+
+        const std::vector<std::string_view> word = Text::words(line);
+
+        // A line whose first word starts with '#' is a note for the reader.
+        if (!word.empty() && word.front().front() == '#')
+            continue;
+
+        if (!afterMarker && word.size() == 1 && word.front() == FoundMarker) {
+            afterMarker = true;
+            continue;
+        }
+
+        for (const std::string_view token : word) {
+            const std::size_t equals = token.find('=');
+            const std::string_view name = token.substr(0, equals);
+
+            // The value keeps every '=' after the first, which both specs use.
+            if (!afterMarker && equals != std::string_view::npos && (name == "goal" || name == "effort")) {
+                const bool isGoal = name == "goal";
+                if (isGoal ? goalGiven : effortGiven)
+                    return fail(std::format("'{}' is given twice", name));
+
+                (isGoal ? goalSpec : effortSpec) = token.substr(equals + 1);
+                (isGoal ? goalGiven : effortGiven) = true;
+                continue;
+            }
+
+            std::string& into = afterMarker ? forFound : forVillage;
+            into += token;
+            into += ' ';
+        }
+
+        if (end == text.size())
+            break;
+    }
+
+    if (!goalGiven)
+        return fail("no 'goal=' in the report; it names the goals the search ranked by");
+
+    ParsedRepro parsed;
+
+    const std::expected<Goals, Error> goals = Parse::goals(goalSpec);
+    if (!goals)
+        return std::unexpected{goals.error()};
+    parsed.goals = *goals;
+
+    const std::expected<SearchLimits, Error> limits = Parse::effort(effortSpec);
+    if (!limits)
+        return std::unexpected{limits.error()};
+    parsed.limits = *limits;
+
+    const std::expected<ParsedVillage, Error> village = Parse::village(forVillage);
+    if (!village)
+        return std::unexpected{village.error()};
+    parsed.village = *village;
+
+    if (afterMarker) {
+        const std::expected<ParsedVillage, Error> layout = Parse::village(forFound);
+        if (!layout)
+            return fail(std::format("the layout it found: {}", layout.error().message));
+        parsed.found = *layout;
+    }
+
+    return parsed;
 }
 
 namespace {

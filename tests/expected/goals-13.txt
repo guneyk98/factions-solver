@@ -1,0 +1,4 @@
+ranking=ratio
+goal wood.production weight=4200 atLeast=0
+goal iron.production weight=2800 atLeast=0
+goal workers.production weight=35 atLeast=0

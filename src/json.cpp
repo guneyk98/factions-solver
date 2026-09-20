@@ -282,11 +282,27 @@ std::string of(const SearchResult& found, std::span<const Goal> goals, Ranking r
     for (std::size_t k = 0; k < goals.size(); ++k) {
         std::format_to(std::back_inserter(out), "{}{{\"id\":\"{}\",\"label\":\"{}\",\"weight\":{:.10g},\"before\":{:.10g},\"after\":{:.10g}", k == 0 ? "" : ",", goals[k].objective->id, goals[k].objective->label, goals[k].weight, found.before[k], found.after[k]);
 
+        if (goals[k].atLeast > 0)
+            std::format_to(std::back_inserter(out), ",\"atLeast\":{:.10g}", goals[k].atLeast);
         if (k < found.bestAlone.size())
             std::format_to(std::back_inserter(out), ",\"alone\":{:.10g}", found.bestAlone[k]);
         out += '}';
     }
-    std::format_to(std::back_inserter(out), "],\"ranking\":\"{}\",", ranking == Ranking::WeightedSum ? "weighted-sum" : "lexicographic");
+
+    const std::string_view named = ranking == Ranking::WeightedSum ? "weighted-sum"
+        : ranking == Ranking::Ratio                                ? "ratio"
+                                                                   : "lexicographic";
+    std::format_to(std::back_inserter(out), "],\"ranking\":\"{}\",", named);
+
+    /* How many multiples of the goals' targets the arrangement supplies, and
+       which goal holds that number down. See Ranking::Ratio. */
+    if (ranking == Ranking::Ratio) {
+        const std::size_t binding = bindingGoal(goals, found.after);
+        std::format_to(std::back_inserter(out), "\"multiples\":{{\"before\":{:.10g},\"after\":{:.10g}", targetMultiple(goals, found.before), targetMultiple(goals, found.after));
+        if (binding < goals.size())
+            std::format_to(std::back_inserter(out), ",\"binding\":\"{}\"", goals[binding].objective->id);
+        out += "},";
+    }
 
     std::format_to(std::back_inserter(out), "\"evaluated\":{},\"moved\":{},\"terraformed\":{},\"layout\":{{", found.evaluated, found.moved, found.terraformed);
 

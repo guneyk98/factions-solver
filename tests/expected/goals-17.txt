@@ -1,0 +1,3 @@
+ranking=in-order
+goal wood.storage weight=1 atLeast=4200
+goal iron.storage weight=1 atLeast=2800

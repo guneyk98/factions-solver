@@ -28,16 +28,41 @@ def run(case, goal, effort):
     return json.loads(out.stdout)
 
 
+def decides(mine, theirs):
+    scale = max(abs(mine), abs(theirs), 1.0)
+    return abs(mine - theirs) > 1e-9 * scale
+
+
+def shortfall(d):
+    """By how much a layout misses the goals' minimums, relative to each."""
+    return sum(max(0.0, (g['atLeast'] - g['after']) / g['atLeast'])
+               for g in d['goals'] if g.get('atLeast', 0) > 0)
+
+
+def multiples(d):
+    """The least and the total of value/target over the goals with a target."""
+    supplied = [g['after'] / g['weight'] for g in d['goals'] if g['weight'] > 0]
+    return (min(supplied), sum(supplied)) if supplied else (0.0, 0.0)
+
+
 def better(a, b):
     """Whether a scores better than b, by the rule the solver compares by."""
+    if decides(shortfall(a), shortfall(b)):
+        return shortfall(a) < shortfall(b)
+
     if a['ranking'] == 'weighted-sum':
         total = lambda d: sum(g['weight'] * g['after'] / g['alone']
                               for g in d['goals'] if g.get('alone', 0) > 0)
         return total(a) > total(b)
 
+    if a['ranking'] == 'ratio':
+        for mine, theirs in zip(multiples(a), multiples(b)):
+            if decides(mine, theirs):
+                return mine > theirs
+        # Tied on the ratio, so the goals decide, in the order they are listed.
+
     for one, two in zip(a['goals'], b['goals']):
-        scale = max(abs(one['after']), abs(two['after']), 1.0)
-        if abs(one['after'] - two['after']) > 1e-9 * scale:
+        if decides(one['after'], two['after']):
             return one['after'] > two['after']
     return False
 
@@ -48,7 +73,9 @@ def same(a, b):
 
 def main():
     goals = ['wood.production', 'soldiers.production.attack',
-             'wood.production:2,iron.production:1', 'wood.storage,iron.storage']
+             'wood.production:2,iron.production:1', 'wood.storage,iron.storage',
+             'wood.production=2,iron.production=1',
+             'wood.production,iron.storage>=30000']
 
     tried = differed = bad = 0
 

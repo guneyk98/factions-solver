@@ -102,6 +102,13 @@ struct Score {
     std::array<double, Objective::Count> value{};
     std::size_t count = 0;
     double weighted_sum = 0.0;
+
+    // Under Ranking::Ratio: the smallest value/weight, and the sum of them.
+    double multiple = 0.0;
+    double multiple_sum = 0.0;
+
+    // How far the minimums are missed, each as a share of its own, summed.
+    double shortfall = 0.0;
 };
 
 double comparisonScale(double a, double b)
@@ -124,6 +131,32 @@ ScoreDifference compareLexicographic(const Score& a, const Score& b)
             return ScoreDifference{diff > 0 ? 1 : -1, diff, scale};
     }
     return ScoreDifference{};
+}
+
+// A missed minimum outranks everything else: the shortfall is worked down to
+// zero first.
+ScoreDifference compareShortfall(const Score& a, const Score& b)
+{
+    const double scale = comparisonScale(a.shortfall, b.shortfall);
+    const double diff = b.shortfall - a.shortfall; // less missed is better
+    if (std::abs(diff) > 1e-9 * scale)
+        return ScoreDifference{diff > 0 ? 1 : -1, diff, scale};
+    return ScoreDifference{};
+}
+
+ScoreDifference compareRatio(const Score& a, const Score& b)
+{
+    for (const auto& [mine, theirs] : {std::pair{a.multiple, b.multiple}, std::pair{a.multiple_sum, b.multiple_sum}}) {
+        const double scale = comparisonScale(mine, theirs);
+        const double diff = mine - theirs;
+        if (std::abs(diff) > 1e-9 * scale)
+            return ScoreDifference{diff > 0 ? 1 : -1, diff, scale};
+    }
+
+    /* The ratio cannot tell the two apart, so the goals decide, in order. It
+       is the only comparison a goal with no target takes part in, and what
+       stops a seal the ratio is indifferent to being left where it fell. */
+    return compareLexicographic(a, b);
 }
 
 ScoreDifference compareWeightedSum(const Score& a, const Score& b)
@@ -321,6 +354,8 @@ public:
     Search(const Rules& rules, const GameModifiers& modifiers, const Village& village, std::span<const Goal> goals, Ranking ranking, std::span<const double> bestAlone, SearchLimits limits)
         : rules_(rules), modifiers_(modifiers), goals_(goals), ranking_(ranking), best_alone_(bestAlone), limits_(limits), terrain_(terrainOnly(village)), initial_(placedBuildings(village)), rng_(limits.seed)
     {
+        for (const Goal& goal : goals_)
+            has_minimum_ = has_minimum_ || goal.atLeast > 0;
 
         for (std::size_t p = 0; p < initial_.size(); ++p) {
             // A Square looks the same in every orientation, so trying one is
@@ -459,18 +494,44 @@ private:
     {
         Score out;
         out.count = goals_.size();
+        bool anyTarget = false;
+
         for (std::size_t k = 0; k < out.count; ++k) {
             out.value[k] = goals_[k].objective->read(output);
 
             if (ranking_ == Ranking::WeightedSum && k < best_alone_.size() && best_alone_[k] > 0)
                 out.weighted_sum += goals_[k].weight * out.value[k] / best_alone_[k];
+
+            if (ranking_ == Ranking::Ratio && goals_[k].weight > 0) {
+                const double supplied = out.value[k] / goals_[k].weight;
+                out.multiple = anyTarget ? std::min(out.multiple, supplied) : supplied;
+                out.multiple_sum += supplied;
+                anyTarget = true;
+            }
+
+            if (goals_[k].atLeast > 0 && out.value[k] < goals_[k].atLeast)
+                out.shortfall += (goals_[k].atLeast - out.value[k]) / goals_[k].atLeast;
         }
         return out;
     }
 
     ScoreDifference compare(const Score& a, const Score& b) const
     {
-        return ranking_ == Ranking::WeightedSum ? compareWeightedSum(a, b) : compareLexicographic(a, b);
+        if (has_minimum_) {
+            const ScoreDifference missed = compareShortfall(a, b);
+            if (missed.sign != 0)
+                return missed;
+        }
+
+        switch (ranking_) {
+        case Ranking::WeightedSum:
+            return compareWeightedSum(a, b);
+        case Ranking::Ratio:
+            return compareRatio(a, b);
+        case Ranking::Lexicographic:
+            break;
+        }
+        return compareLexicographic(a, b);
     }
 
     std::size_t randomIndex(std::size_t count)
@@ -711,12 +772,37 @@ private:
     std::vector<std::size_t> buildable_tiles_;
     std::size_t sealed_count_ = 0;
 
+    bool has_minimum_ = false; // any goal carrying a Goal::atLeast
+
     std::mt19937_64 rng_;
     long long evaluated_ = 0;              // over the whole run, for the report
     long long evaluated_this_restart_ = 0; // in the current restart, against the budget
 };
 
 } // namespace
+
+std::size_t bindingGoal(std::span<const Goal> goals, std::span<const double> values)
+{
+    std::size_t binding = goals.size();
+    double least = 0;
+
+    for (std::size_t k = 0; k < goals.size() && k < values.size(); ++k) {
+        if (goals[k].weight <= 0)
+            continue;
+        const double supplied = values[k] / goals[k].weight;
+        if (binding == goals.size() || supplied < least) {
+            binding = k;
+            least = supplied;
+        }
+    }
+    return binding;
+}
+
+double targetMultiple(std::span<const Goal> goals, std::span<const double> values)
+{
+    const std::size_t binding = bindingGoal(goals, values);
+    return binding == goals.size() ? 0.0 : values[binding] / goals[binding].weight;
+}
 
 SearchResult rearrange(const GameModifiers& modifiers, const Village& village, std::span<const Goal> goals, Ranking ranking, SearchLimits limits, int game)
 {

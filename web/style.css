@@ -144,6 +144,7 @@ h2 {
 .build-level input,
 .level-editor input,
 .goal-weight,
+.goal-least,
 .goal-reading select,
 .modifier-input,
 .modifier-select,
@@ -164,6 +165,7 @@ h2 {
 .build-level input:focus,
 .level-editor input:focus,
 .goal-weight:focus,
+.goal-least:focus,
 .goal-reading select:focus,
 .modifier-input:focus,
 .modifier-select:focus,
@@ -530,14 +532,14 @@ kbd {
 /* ---------- the solver ---------- */
 
 .goal-list {
-  list-style: decimal inside;
+  list-style: none;
   margin: 8px 0;
   padding: 0;
   font-size: 12px;
 }
 
-/* A fixed height and a fixed slot for the weight, so ticking Balance swaps
-   what the slot holds without moving anything above or below it. */
+/* A fixed height, so changing the rule swaps what the row carries without
+   moving the rows around it. */
 .goal {
   display: flex;
   align-items: center;
@@ -553,14 +555,23 @@ kbd {
   margin-top: 3px;
 }
 
-/* The first goal is the one that decides, unless they are being weighed. */
-.goal-list:not(.weighed) .goal:first-child .goal-name {
+/* Under the ranked rule the first goal decides. Under the ratio rule it
+   decides only ties, so it is not marked. */
+.goal-list.ranked .goal:first-child .goal-name {
   color: var(--accent);
 }
 
 .goal-name {
   flex: 1;
   min-width: 0;
+}
+
+.goal-rank {
+  flex: 0 0 auto;
+  width: 14px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The grip, and the row it belongs to: the whole row is the handle, so the
@@ -573,15 +584,15 @@ kbd {
   letter-spacing: -2px;
 }
 
-.goal-list:not(.weighed) .goal {
+.goal-list.ordered .goal {
   cursor: grab;
   touch-action: none;
   /* a drag down the list must not scroll the panel */
   user-select: none;
 }
 
-.goal-list:not(.weighed) .goal:hover .goal-grip,
-.goal-list:not(.weighed) .goal:focus-visible .goal-grip {
+.goal-list.ordered .goal:hover .goal-grip,
+.goal-list.ordered .goal:focus-visible .goal-grip {
   color: var(--text);
 }
 
@@ -590,9 +601,112 @@ kbd {
   outline-offset: 1px;
 }
 
-/* Weights decide the answer when they are on, so there is no order to drag. */
-.goal-list.weighed .goal-grip {
+/* Weights decide on their own: no order to drag, no rank to number. The rank
+   keeps its width so the rows do not shift. */
+.goal-list:not(.ordered) .goal-rank {
+  visibility: hidden;
+}
+
+.goal-list:not(.ordered) .goal-grip {
   opacity: 0.25;
+}
+
+.goal-head-use {
+  flex: 0 0 auto;
+  width: 13px;
+}
+
+/* The columns of the rows below. Each figure column is the width of the
+   field it names. */
+.goal-head {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  margin: 8px 0 3px;
+  padding: 0 5px 0 3px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.goal-head-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.goal-head-figure {
+  flex: 0 0 auto;
+  width: 62px;
+  text-align: right;
+}
+
+/* The head above carries the margin. */
+.goal-list.headed {
+  margin-top: 0;
+}
+
+.goal-hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.goal-use {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent-deep);
+}
+
+/* A goal the search is not asked for. Still listed, still holding figures. */
+.goal-off .goal-name,
+.goal-off .goal-weight,
+.goal-off .goal-least {
+  opacity: 0.4;
+}
+
+/* ---------- the objectives panel ---------- */
+
+.objectives-card {
+  width: min(460px, 94vw);
+}
+
+.objectives-subhead {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+
+/* The solve panel's stand-in for the list. */
+.objectives-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+#objectives-open {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.objectives-rule {
+  color: var(--accent);
+}
+
+.objectives-goals {
+  color: var(--muted);
+}
+
+.objectives-trouble {
+  color: var(--bad);
 }
 
 /* The rows a drag passes slide out of its way; the dragged row follows the
@@ -615,14 +729,54 @@ kbd {
   font-size: 11.5px;
 }
 
-.goal-weight {
-  width: 44px;
+.goal-weight,
+.goal-least {
+  width: 62px;
   flex: 0 0 auto;
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+/* A minimum is the exception, so an empty one stays quiet. */
+.goal-least {
+  border-style: dashed;
+}
+
+.goal-least:placeholder-shown {
+  color: var(--muted);
+}
+
+.solve-debug {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.solve-debug-text {
+  margin-top: 4px;
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  font: 10px/1.35 ui-monospace, monospace;
+  padding: 6px;
+  resize: vertical;
+}
+
+.goal-fill {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.goal-fill button {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px 6px;
 }
 
 .goal-reading {
@@ -2000,6 +2154,12 @@ details.panel summary h2 {
   margin: 0;
   font-size: 11px;
   color: var(--muted);
+}
+
+/* A minimum no layout reached. */
+.solve-summary.short {
+  color: var(--bad);
+  margin-bottom: 3px;
 }
 
 /* The goals and the result scroll with the view rather than past the bottom

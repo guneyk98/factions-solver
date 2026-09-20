@@ -90,28 +90,9 @@
       </section>
 
       <section id="solve-view" hidden>
-        <ol class="goal-list" id="goal-list"></ol>
-        <label class="checkbox goal-mode">
-          <input type="checkbox" id="goal-balance"> Balance them by weight
-        </label>
-        <label class="goal-reading">
-          <span>Soldiers/t means <span class="help"
-              title="Optimise base soldiers/t, or effective (atk/def) soldiers/t.">?</span></span>
-          <select id="soldier-mode"></select>
-        </label>
-        <label class="goal-reading">
-          <span>Workers/t means <span class="help"
-              title="Optimise base workers/t, or effective workers/t (age, map or project efficiency).">?</span></span>
-          <select id="worker-mode"></select>
-        </label>
-        <label class="goal-reading">
-          <span>Power and /t <span class="help"
-              title="Which of the two the power goal and the /t goal below are read for.">?</span></span>
-          <div class="choice unit-choice" id="unit-choice"></div>
-        </label>
-        <label class="checkbox goal-mode">
-          <input type="checkbox" id="goal-market"> Wood/t and Iron/t after market tax
-        </label>
+        <div class="objectives-summary" id="objectives-summary"></div>
+        <button type="button" id="objectives-open">Edit objectives…</button>
+
         <label class="checkbox goal-mode">
           <input type="checkbox" id="terraform-allowed"> Terraform the tiles buildings stand on <span class="help"
             title="Lets the search change a tile's terrain to one the building standing on it has a bonus for. Sea and high mountain are never changed, and a terraform the output does not depend on is undone.">?</span>
@@ -125,6 +106,11 @@
         </label>
         <button type="button" id="solve">Find a better layout</button>
         <div class="solve-result" id="solve-result" hidden></div>
+        <button type="button" class="solve-debug" id="solve-debug" hidden
+          title="The village, goals, effort and answer of the search just run, in the form the engine reads back.">Copy
+          debug report</button>
+        <textarea id="solve-debug-text" class="solve-debug-text" rows="4" readonly spellcheck="false"
+          hidden></textarea>
       </section>
     </aside>
 
@@ -346,6 +332,63 @@
           and every saved layout.</p>
       </div>
 
+    </div>
+  </div>
+
+  <div class="modal" id="objectives-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card objectives-card" role="dialog" aria-modal="true" aria-labelledby="objectives-title">
+      <div class="modal-head">
+        <h2 id="objectives-title">Search objectives</h2>
+        <span class="help"
+          title="What the search maximises, and how it compares two layouts.">?</span>
+        <button type="button" class="modal-close" id="objectives-close" data-close
+          title="Close (Esc)">&#10005;</button>
+      </div>
+
+      <label class="goal-reading">
+        <span>Compare layouts by</span>
+        <select id="goal-ranking"></select>
+      </label>
+      <p class="goal-hint" id="goal-hint"></p>
+
+      <div class="goal-head">
+        <span class="goal-head-use" title="Ask the search for this goal"></span>
+        <span class="goal-head-name">Goal</span>
+        <span class="goal-head-figure" id="goal-head-figure"></span>
+        <span class="goal-head-figure" title="A figure the layout must reach, whatever else it costs">At least</span>
+      </div>
+      <ol class="goal-list headed" id="goal-list"></ol>
+
+      <div class="goal-fill">
+        <button type="button" id="fill-ratio" hidden
+          title="Sets the wood, iron and worker /t targets to that cost and clears the others, so the search reaches the level in the fewest ticks.">Targets
+          = next village level</button>
+        <button type="button" id="fill-minimums"
+          title="Sets the wood, iron and worker cap minimums to that cost, which a smaller store cannot hold.">Caps
+          ≥ next village level</button>
+      </div>
+
+      <h3 class="objectives-subhead">What each goal reads</h3>
+
+      <label class="goal-reading">
+        <span>Soldiers/t means <span class="help"
+            title="Optimise base soldiers/t, or effective (atk/def) soldiers/t.">?</span></span>
+        <select id="soldier-mode"></select>
+      </label>
+      <label class="goal-reading">
+        <span>Workers/t means <span class="help"
+            title="Optimise base workers/t, or effective workers/t (age, map or project efficiency).">?</span></span>
+        <select id="worker-mode"></select>
+      </label>
+      <label class="goal-reading">
+        <span>Power and /t <span class="help"
+            title="Which of the two the power and /t goals read.">?</span></span>
+        <div class="choice unit-choice" id="unit-choice"></div>
+      </label>
+      <label class="checkbox goal-mode">
+        <input type="checkbox" id="goal-market"> Wood/t and Iron/t after market tax
+      </label>
     </div>
   </div>
 

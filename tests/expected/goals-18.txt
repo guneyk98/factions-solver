@@ -1,0 +1,3 @@
+ranking=blended
+goal wood.production weight=2 atLeast=10
+goal iron.production weight=1 atLeast=0

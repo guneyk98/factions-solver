@@ -1,0 +1,1 @@
+!a goal carries either a weight or a ratio target, not one of each

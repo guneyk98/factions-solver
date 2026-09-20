@@ -1,6 +1,7 @@
 #pragma once
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -50,13 +51,39 @@ struct Goals {
     Ranking ranking = Ranking::Lexicographic;
 };
 
-// 'id' or 'id:weight', comma separated. Weighting every goal or none of them
-// is what chooses the ranking.
+/* 'id', 'id:weight' (Ranking::WeightedSum) or 'id=target'
+   (Ranking::Ratio), comma separated, each optionally followed by '>=minimum'.
+   Weighting or targeting every goal or none of them is what chooses the
+   ranking; a minimum is read under any of the three. */
 std::expected<Goals, Error> goals(std::string_view spec);
 
 /* 'name=value' settings, comma separated, over SearchLimits' defaults. Every
    one is a whole number, except that 'terraform' also accepts 'unlimited'. */
 std::expected<SearchLimits, Error> effort(std::string_view spec);
+
+// A search to repeat: everything rearrange() was given the first time.
+struct ParsedRepro {
+    ParsedVillage village;
+    Goals goals;
+    SearchLimits limits;
+
+    /* The layout the search answered with, where the report carries one. The
+       search itself is a path through floating-point comparisons, so a build
+       other than the one that ran it can settle on another layout of the same
+       rank; this one's figures are reproducible whatever ran it. */
+    std::optional<ParsedVillage> found;
+};
+
+/* The debug report the page writes after a search: the village text with a
+   'goal=' token and an optional 'effort=' token among it, and lines whose
+   first word starts with '#' dropped as comments. A line reading 'found' ends
+   that section, and the village text after it is the layout the search
+   answered with.
+
+   The report carries no restart slice, since the page runs the restarts
+   across workers and keeps the best: the same restarts run undivided reach
+   the same layout, which is what tests/split.py checks. */
+std::expected<ParsedRepro, Error> repro(std::string_view text);
 
 // A simulator run: the village it starts from, what the player holds then,
 // and the steps taken from there.

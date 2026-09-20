@@ -1,3 +1,3 @@
 ranking=in-order
-goal wood.production weight=1
-goal iron.production weight=1
+goal wood.production weight=1 atLeast=0
+goal iron.production weight=1 atLeast=0

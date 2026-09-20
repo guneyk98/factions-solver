@@ -1,0 +1,1 @@
+!either every goal carries a ratio target or none does

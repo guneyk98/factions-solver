@@ -69,9 +69,9 @@ int goals(std::string_view spec)
     if (!parsed)
         return reject(parsed.error().message);
 
-    std::cout << "ranking=" << (parsed->ranking == Ranking::WeightedSum ? "blended" : "in-order") << '\n';
+    std::cout << "ranking=" << (parsed->ranking == Ranking::WeightedSum ? "blended" : parsed->ranking == Ranking::Ratio ? "ratio" : "in-order") << '\n';
     for (const Goal& goal : parsed->goals)
-        std::cout << "goal " << goal.objective->id << " weight=" << goal.weight << '\n';
+        std::cout << "goal " << goal.objective->id << " weight=" << goal.weight << " atLeast=" << goal.atLeast << '\n';
     return 0;
 }
 
@@ -256,6 +256,38 @@ int rearranged(const std::string& text, std::string_view goal, std::string_view 
     return 0;
 }
 
+/* A search repeated from the debug report the page writes for it. The output
+   is the rearrange output, so the two can be compared line for line. */
+int repro(const std::string& text)
+{
+    const auto parsed = Parse::repro(text);
+    if (!parsed)
+        return reject(parsed.error().message);
+
+    const std::span<const Goal> goals{parsed->goals.goals};
+    std::cout << Json::of(rearrange(parsed->village.modifiers, parsed->village.village, goals, parsed->goals.ranking, parsed->limits, parsed->village.game), goals, parsed->goals.ranking) << '\n';
+    return 0;
+}
+
+/* The production of the layout a debug report answered with, which is the
+   block the page was showing for it. Its output is the production output, so
+   the two can be compared line for line. */
+int reproFound(const std::string& text)
+{
+    const auto parsed = Parse::repro(text);
+    if (!parsed)
+        return reject(parsed.error().message);
+    if (!parsed->found)
+        return reject("the report carries no 'found' layout");
+
+    ProductionDetail detail;
+    AuraDetail auras;
+    const Rules& rules = Rules::of(parsed->found->game);
+    const Output output = runEffects(rules, parsed->found->modifiers, parsed->found->village, &detail, &auras);
+    std::cout << Json::of(output, detail, auras, rules.game(), parsed->found->village, parsed->found->season) << '\n';
+    return 0;
+}
+
 // A simulator run, replayed from its script. See Parse::script.
 int simulate(const std::string& text)
 {
@@ -276,7 +308,7 @@ int main(int argc, char** argv)
     const std::vector<std::string_view> args{argv + 1, argv + argc};
 
     if (args.empty()) {
-        std::cerr << "usage: harness <production|goals|effort|rearrange|simulate> ...\n";
+        std::cerr << "usage: harness <production|goals|effort|rearrange|repro|found|simulate> ...\n";
         return 2;
     }
 
@@ -298,6 +330,10 @@ int main(int argc, char** argv)
         return games();
     if (mode == "simulate" && args.size() == 2)
         return simulate(slurp(argv[2]));
+    if (mode == "repro" && args.size() == 2)
+        return repro(slurp(argv[2]));
+    if (mode == "found" && args.size() == 2)
+        return reproFound(slurp(argv[2]));
     if (mode == "rearrange" && args.size() == 4)
         return rearranged(slurp(argv[2]), args[2], args[3]);
 

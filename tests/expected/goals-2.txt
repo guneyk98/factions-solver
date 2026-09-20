@@ -1,2 +1,2 @@
 ranking=in-order
-goal soldiers.production.attack weight=1
+goal soldiers.production.attack weight=1 atLeast=0

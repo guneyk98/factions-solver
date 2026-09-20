@@ -14,6 +14,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 harness="$root/build/HarnessChecked"
 cases="$root/tests/cases"
 scripts="$root/tests/scripts"
+repros="$root/tests/repros"
 expected="$root/tests/expected"
 
 record=0
@@ -96,6 +97,15 @@ goals=(
     'wood.production:x'
     'wood.production:-1'
     'workers.production.map'
+    'wood.production=4200,iron.production=2800,workers.production=35'
+    'wood.production=2,iron.production'
+    'wood.production=1,iron.production:2'
+    'wood.production=0,iron.production=0'
+    'wood.storage>=4200,iron.storage>=2800'
+    'wood.production:2>=10,iron.production:1'
+    'wood.production=-1'
+    'wood.production>=x'
+    'wood.production>=-1'
 )
 
 for i in "${!goals[@]}"; do
@@ -131,6 +141,23 @@ check "rearrange-full-wood" rearrange "$cases/full.txt" 'wood.production' "$smal
 check "rearrange-full-blended" rearrange "$cases/full.txt" 'wood.production:2,soldiers.production:1' "$small"
 check "rearrange-bare" rearrange "$cases/bare.txt" 'wood.production' "$small"
 check "rearrange-modifiers" rearrange "$cases/full-modifiers.txt" 'soldiers.production.attack' "$small"
+
+# The ratio rule, and a minimum the layout has to reach whatever it gives up.
+check "rearrange-full-ratio" rearrange "$cases/full.txt" 'wood.production=2,iron.production=1' "$small"
+check "rearrange-full-minimum" rearrange "$cases/full.txt" 'wood.production,iron.storage>=30000' "$small"
+# A goal carrying no target takes part in one comparison only: the tie between
+# two layouts the ratio cannot separate.
+check "rearrange-full-ratio-untargeted" rearrange "$cases/full.txt" 'wood.production=2,iron.production=1,wood.storage=0' "$small"
+
+# Every debug report: the one a page copies after a search, which has to
+# repeat that search, so repro-search must answer as rearrange-full-ratio
+# above does; and the ways a report can be malformed.
+for file in "$repros"/*.txt; do
+    name=$(basename "$file" .txt)
+    check "repro-$name" repro "$file"
+    # And the production of the layout the report says the search answered with.
+    check "found-$name" found "$file"
+done
 
 # Terraforming: a counted budget the search must stay inside, and one bounded
 # only by the arrangement.
@@ -177,6 +204,24 @@ if [[ -f $root/build/site/engine.js ]] && command -v node >/dev/null \
             failed=$(( failed + 1 ))
         fi
     done
+
+    # The report the page just wrote for its own search, read back by the
+    # engine. Anything the engine refuses comes out as a line starting '!'.
+    if [[ -f $root/build/debug-report.txt ]]; then
+        refused=''
+        for mode in repro found; do
+            got=$("$harness" "$mode" "$root/build/debug-report.txt") || got="the harness would not run"
+            [[ $got == '!'* ]] && refused="$mode: $got"
+        done
+
+        if [[ -z $refused ]]; then
+            printf 'the debug report the page writes is one the engine reads back\n'
+            passed=$(( passed + 1 ))
+        else
+            printf 'FAIL the page debug report: %s\n' "${refused:0:200}" >&2
+            failed=$(( failed + 1 ))
+        fi
+    fi
 else
     printf 'skipping the startup checks: no jsdom (npm install --no-save jsdom)\n'
 fi

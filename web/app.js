@@ -20,6 +20,33 @@ const UNDO_HISTORY = 'factions-solver/v1/undo-history';
 const UNDO_HISTORY_MAX = 60;
 
 
+/* How two layouts are compared. `column` names the figure each goal carries,
+   `spec` writes it in the form Parse::goals reads. */
+const RANKINGS = [
+  {
+    key: 'ranked',
+    option: 'Rank in order',
+    column: '',
+    help: 'Compares on the first goal, ties on the second, and so on. Drag or arrow-key to reorder.',
+    spec: null,
+  },
+  {
+    key: 'weighted',
+    option: 'Blend by weight',
+    column: 'Weight',
+    help: 'Compares on the sum of weight \u00d7 value \u00f7 that goal\u2019s best alone. Order is ignored.',
+    spec: (id, value) => `${id}:${value}`,
+  },
+  {
+    key: 'ratio',
+    option: 'Hit a ratio',
+    column: 'Target',
+    help: 'Maximises the smallest value \u00f7 target, so the targets are met in proportion.'
+      + ' 0 leaves a goal out; ties break on the goal order. Drag or arrow-key to reorder.',
+    spec: (id, value) => `${id}=${value}`,
+  },
+];
+
 const state = {
   game: GAMES[0].id,
   // The season index to cost against, or null to follow the clock. Setting it
@@ -56,8 +83,14 @@ const state = {
   terraform: { allowed: false, tiles: 6, unlimited: false },
   effort: 'normal',
   customEffort: { ...EFFORTS.normal },
-  balance: false,
+  // `weights` is read under the weighted rule, `targets` under the ratio one,
+  // `minimums` under all three.
+  ranking: 'ranked',
   weights: Object.fromEntries(OBJECTIVES.map((o) => [o.id, 1])),
+  targets: Object.fromEntries(OBJECTIVES.map((o) => [o.id, 0])),
+  minimums: Object.fromEntries(OBJECTIVES.map((o) => [o.id, 0])),
+  // One must stay on.
+  used: Object.fromEntries(OBJECTIVES.map((o) => [o.id, true])),
 };
 
 let drag = null;
@@ -859,7 +892,7 @@ const SEARCH_HELP = 'Rearranges the buildings and seals you have. Nothing is bui
   + 'or levelled. Undo/redo steps between before and after.';
 
 function renderHelp() {
-  viewHelp.title = state.panel === 'solve' ? `${goalHelp()}\n\n${SEARCH_HELP}` : PLACING_HELP;
+  viewHelp.title = state.panel === 'solve' ? SEARCH_HELP : PLACING_HELP;
 }
 
 /* ------------------------------ editing ------------------------------ */
@@ -1382,6 +1415,8 @@ function saveAndRender() {
 const goalListEl = document.getElementById('goal-list');
 const solveButton = document.getElementById('solve');
 const solveResult = document.getElementById('solve-result');
+const debugButton = document.getElementById('solve-debug');
+const debugText = document.getElementById('solve-debug-text');
 const soldierModeSelect = document.getElementById('soldier-mode');
 const workerModeSelect = document.getElementById('worker-mode');
 const unitChoice = document.getElementById('unit-choice');
@@ -1390,7 +1425,35 @@ const marketBox = document.getElementById('goal-market');
 // must be resolvable to a name here.
 const GOAL_BY_ID = new Map([...OBJECTIVES, ...SOLDIER_MODES, ...WORKER_MODES, ...MARKET_GOALS,
 ...UNIT_READINGS.flatMap((one) => [one.power, one.production])].map((o) => [o.id, o]));
-const balanceBox = document.getElementById('goal-balance');
+const rankingSelect = document.getElementById('goal-ranking');
+const fillRatioButton = document.getElementById('fill-ratio');
+const goalHint = document.getElementById('goal-hint');
+const objectivesModal = document.getElementById('objectives-modal');
+const objectivesSummary = document.getElementById('objectives-summary');
+const goalHeadFigure = document.getElementById('goal-head-figure');
+
+function ranking() {
+  return RANKINGS.find((one) => one.key === state.ranking) ?? RANKINGS[0];
+}
+
+// The goals in play, in the order listed.
+function goalsInPlay() {
+  return state.goals.filter((id) => state.used[id]);
+}
+
+// The ranked rule reads the order as the ranking, the ratio rule as the
+// tie-break. Weights decide on their own.
+function orderMatters() {
+  return state.ranking !== 'weighted';
+}
+
+// The number a goal carries under the current rule, or null where it carries
+// none.
+function goalNumbers() {
+  if (state.ranking === 'weighted') return state.weights;
+  if (state.ranking === 'ratio') return state.targets;
+  return null;
+}
 
 function soldierMode() {
   return SOLDIER_MODES.find((m) => m.key === state.soldierMode) ?? SOLDIER_MODES[0];
@@ -1415,16 +1478,82 @@ function goalReading(id) {
   return GOAL_BY_ID.get(id);
 }
 
-function goalHelp() {
-  return state.balance
-    ? 'Weighted: 1 weight = 1% of that goal\u2019s own best, so different units compare.'
-    : 'Ranked: each goal breaks ties left by the one above. Drag a goal, or use the arrow keys, to reorder them.';
+// 0 is nothing asked for, so the field shows its placeholder instead.
+function fieldValue(value) {
+  return value > 0 ? String(value) : '';
+}
+
+// One number field on a goal row. An emptied field asks for nothing.
+function goalNumberField(cls, value, title, take) {
+  const field = document.createElement('input');
+  field.type = 'number';
+  field.className = cls;
+  field.min = '0';
+  field.step = 'any';
+  field.value = value;
+  field.title = title;
+
+  field.addEventListener('input', () => {
+    const typed = Number(field.value);
+    if (field.value !== '' && Number.isFinite(typed) && typed >= 0) take(typed);
+    else if (field.value === '') take(0);
+    else return; // mid-edit, and not yet a figure the search can use
+
+    // The summary alone: rebuilding the rows would take the focus off this
+    // field.
+    renderObjectivesSummary();
+    saveSoon();
+  });
+  field.addEventListener('change', () => {
+    if (!(Number(field.value) >= 0)) field.value = value;
+  });
+  return field;
+}
+
+// What the solve panel shows in place of the goal list.
+function renderObjectivesSummary() {
+  const inPlay = goalsInPlay();
+  const numbers = goalNumbers();
+  const named = (id) => GOAL_BY_ID.get(goalReading(id).id).name;
+
+  // Under the ratio rule a goal with no figure is counted, not listed: it is
+  // not part of the ratio.
+  const carrying = state.ranking === 'ratio' ? inPlay.filter((id) => numbers[id] > 0) : inPlay;
+  const listed = carrying.map((id) => (numbers === null || numbers[id] === 0
+    ? named(id)
+    : `${named(id)} ${fmt(numbers[id], 0)}`));
+
+  const shown = listed.slice(0, 3).join(state.ranking === 'ranked' ? ', then ' : ', ');
+  const rest = listed.length > 3 ? ` and ${listed.length - 3} more` : '';
+  const ties = inPlay.length - carrying.length;
+  const minimums = inPlay.filter((id) => state.minimums[id] > 0).length;
+
+  // A ratio of nothing is refused by the engine; caught before the search.
+  const trouble = state.ranking === 'ratio' && inPlay.every((id) => state.targets[id] === 0)
+    ? 'No targets set.'
+    : '';
+
+  objectivesSummary.innerHTML = `<span class="objectives-rule">${ranking().option}</span>`
+    + `<span class="objectives-goals">${shown}${rest}`
+    + `${minimums > 0 ? `, ${plural(minimums, 'minimum')}` : ''}`
+    + `${ties > 0 ? `, ${ties} more for ties` : ''}.</span>`
+    + (trouble === '' ? '' : `<span class="objectives-trouble">${trouble}</span>`);
+
+  solveButton.disabled = trouble !== '';
 }
 
 function renderGoals() {
+  renderObjectivesSummary();
   goalListEl.replaceChildren();
-  goalListEl.classList.toggle('weighed', state.balance);
-  renderHelp(); // the ranked-or-weighted line is part of it
+  goalListEl.classList.toggle('ordered', orderMatters());
+  goalListEl.classList.toggle('ranked', state.ranking === 'ranked');
+  goalHint.textContent = ranking().help;
+  goalHeadFigure.textContent = ranking().column;
+  // No column, no cell, or 'at least' sits over the wrong field.
+  goalHeadFigure.hidden = ranking().column === '';
+  fillRatioButton.hidden = state.ranking !== 'ratio';
+
+  const numbers = goalNumbers();
 
 
   state.goals.forEach((id, rank) => {
@@ -1434,36 +1563,55 @@ function renderGoals() {
     item.dataset.rank = String(rank);
     // Order is set by dragging, so each row is also a tab stop the arrow keys
     // can move.
-    item.tabIndex = state.balance ? -1 : 0;
+    item.tabIndex = orderMatters() ? 0 : -1;
+
+    item.append(span('goal-rank', `${rank + 1}`));
 
     const grip = span('goal-grip', '\u2807\u2807');
     grip.setAttribute('aria-hidden', 'true');
     item.append(grip);
 
+    // An unticked goal is left out of the search. The last one on stays on:
+    // the engine refuses a search with no goal.
+    const use = document.createElement('input');
+    use.type = 'checkbox';
+    use.className = 'goal-use';
+    use.checked = state.used[id];
+    use.title = `Include ${goalReading(id).full.toLowerCase()}`;
+    use.disabled = state.used[id] && goalsInPlay().length === 1;
+    use.addEventListener('change', () => {
+      state.used[id] = use.checked;
+      renderGoals();
+      saveSoon();
+    });
+    item.append(use);
+    item.classList.toggle('goal-off', !state.used[id]);
+
     const name = span('goal-name', goalReading(id).name);
     item.title = goalReading(id).full;
     item.append(name);
 
-    const weight = document.createElement('input');
-    weight.type = 'number';
-    weight.className = 'goal-weight';
-    weight.min = '0';
-    weight.step = '1';
-    weight.value = String(state.weights[id]);
-    weight.title = `How much ${goalReading(id).full.toLowerCase()} counts for`;
-    weight.hidden = !state.balance;
-    weight.addEventListener('input', () => {
-      const typed = Number(weight.value);
-      // A blank field mid-edit is not yet a weight; a negative one never is.
-      if (weight.value !== '' && Number.isFinite(typed) && typed >= 0) {
-        state.weights[id] = typed;
-        saveSoon();
-      }
-    });
-    weight.addEventListener('change', () => {
-      if (!(Number(weight.value) >= 0)) weight.value = String(state.weights[id]);
-    });
-    item.append(weight);
+    const reading = goalReading(id).full.toLowerCase();
+
+    if (numbers !== null) {
+      const weight = goalNumberField(
+        'goal-weight',
+        state.ranking === 'ratio' ? fieldValue(numbers[id]) : String(numbers[id]),
+        state.ranking === 'ratio' ? `${reading} per target; 0 leaves it out` : `Weight on ${reading}`,
+        (typed) => { numbers[id] = typed; },
+      );
+      weight.placeholder = state.ranking === 'ratio' ? '\u2013' : '';
+      item.append(weight);
+    }
+
+    const least = goalNumberField(
+      'goal-least',
+      fieldValue(state.minimums[id]),
+      `Minimum ${reading}, whatever else it costs`,
+      (typed) => { state.minimums[id] = typed; },
+    );
+    least.placeholder = '\u2265';
+    item.append(least);
 
     goalListEl.append(item);
   });
@@ -1546,10 +1694,10 @@ function dragGoal(event, item) {
 }
 
 goalListEl.addEventListener('pointerdown', (event) => {
-  // With weights on, order does not affect the result, so dragging is off;
-  // and the weight field needs the pointer for itself.
-  if (state.balance || event.button !== 0) return;
-  if (event.target.closest('.goal-weight') !== null) return;
+  // Where the order changes nothing, dragging is off; and a number field
+  // needs the pointer for itself.
+  if (!orderMatters() || event.button !== 0) return;
+  if (event.target.closest('.goal-weight, .goal-least') !== null) return;
 
   const item = event.target.closest('.goal');
   if (item === null) return;
@@ -1560,17 +1708,63 @@ goalListEl.addEventListener('pointerdown', (event) => {
 });
 
 goalListEl.addEventListener('keydown', (event) => {
-  if (state.balance || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+  if (!orderMatters() || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
   const item = event.target.closest('.goal');
   if (item === null) return;
   event.preventDefault();
   moveGoal(Number(item.dataset.rank), event.key === 'ArrowUp' ? -1 : 1);
 });
 
-balanceBox.addEventListener('change', () => {
-  state.balance = balanceBox.checked;
+for (const one of RANKINGS) addOption(rankingSelect, one.key, one.option, one.help);
+
+rankingSelect.addEventListener('change', () => {
+  const picked = RANKINGS.find((one) => one.key === rankingSelect.value);
+  state.ranking = (picked ?? RANKINGS[0]).key;
   renderGoals();
   saveSoon();
+});
+
+// The next village level's wood, iron and worker cost. Null until the first
+// costing, and while the village is one the engine will not compute.
+function nextVillageUpgrade() {
+  const next = state.result?.cost?.village?.next;
+  return next === undefined ? null : next;
+}
+
+// Targets = the upgrade cost, so the search minimises the ticks it takes.
+function fillRatioFromUpgrade() {
+  const next = nextVillageUpgrade();
+  if (next === null) {
+    showStatus('Nothing costed yet.', true);
+    return;
+  }
+
+  // The cost is the whole ratio; a leftover target is not part of it.
+  for (const { id } of OBJECTIVES) state.targets[id] = 0;
+  for (const { key } of RESOURCES) state.targets[`${key}.production`] = next[key] ?? 0;
+  renderGoals();
+  saveSoon();
+}
+
+// The same cost as a storage minimum: too small a store cannot pay for the
+// upgrade, and storage beyond it buys nothing.
+function fillMinimumsFromUpgrade() {
+  const next = nextVillageUpgrade();
+  if (next === null) {
+    showStatus('Nothing costed yet.', true);
+    return;
+  }
+
+  for (const { key } of RESOURCES) state.minimums[`${key}.storage`] = next[key] ?? 0;
+  renderGoals();
+  saveSoon();
+}
+
+fillRatioButton.addEventListener('click', fillRatioFromUpgrade);
+document.getElementById('fill-minimums').addEventListener('click', fillMinimumsFromUpgrade);
+
+document.getElementById('objectives-open').addEventListener('click', () => {
+  showModal(objectivesModal, document.getElementById('goal-ranking'));
 });
 
 /* The soldier and worker goals each offer a choice of variant, so both menus
@@ -1690,6 +1884,16 @@ function reportSolve(found, took) {
       + `<span class="solve-change ${after > before ? 'up' : 'down'}">${change}</span></li>`];
   });
 
+  // Under the ratio rule the multiple of the target is what is maximised, not
+  // any one goal.
+  if (found.multiples !== undefined) {
+    const { before, after, binding } = found.multiples;
+    const held = binding === undefined ? '' : `, held down by ${GOAL_BY_ID.get(binding).name}`;
+    rows.unshift(`<li title="was ${fmt(before, 2)}${held}"><span class="solve-goal">\u00d7 target</span>`
+      + `<span class="solve-now">${fmt(after, 2)}</span>`
+      + `<span class="solve-change ${after >= before ? 'up' : 'down'}">${before > 0 ? pct(after / before - 1) : ''}</span></li>`);
+  }
+
   const tried = `${found.evaluated.toLocaleString('en-US')} layouts tried in ${elapsed(took)}.`;
   const changed = [];
   if (found.moved > 0) changed.push(`${plural(found.moved, 'building')} moved`);
@@ -1698,13 +1902,23 @@ function reportSolve(found, took) {
     ? `No better layout found. ${tried}`
     : `${changed.join(', ')}, ${tried}`;
 
+  // A minimum no layout reached: the shortfall was worked down, not cleared.
+  const missed = found.goals
+    .filter((g) => g.atLeast > 0 && g.after < g.atLeast)
+    .map((g) => `${GOAL_BY_ID.get(g.id).name} ${goalValue(g.id, g.after)}, short of ${goalValue(g.id, g.atLeast)}`);
+
   solveResult.innerHTML = (rows.length > 0 ? `<ul class="solve-goals">${rows.join('')}</ul>` : '')
+    + (missed.length > 0 ? `<p class="solve-summary short">${missed.join('; ')}.</p>` : '')
     + `<p class="solve-summary">${summary}</p>`;
   solveResult.hidden = false;
 }
 
 let searchers = [];
 let searchTicket = 0;
+
+/* The last search run, for the debug report. Held from before the layout is
+   applied, so the report repeats the search rather than its answer. */
+let lastSearch = null;
 
 /* Each restart draws on a random stream of its own, so running restarts 0..5
    in one worker and 6..11 in another, then taking the better result, is the
@@ -1730,7 +1944,32 @@ function askWorker(worker, message) {
 /* The rule the solver compares two arrangements by, duplicated here because
    each worker reports its own best and one must be selected. Mirrored in
    tests/split.py, which checks the selection against an undivided run. */
+function decides(mine, theirs) {
+  const scale = Math.max(Math.abs(mine), Math.abs(theirs), 1);
+  return Math.abs(mine - theirs) > 1e-9 * scale;
+}
+
+// How far a layout misses the minimums, each as a share of its own. See
+// Goal::atLeast.
+function shortfallOf(found) {
+  return found.goals.reduce(
+    (sum, g) => sum + (g.atLeast > 0 ? Math.max(0, (g.atLeast - g.after) / g.atLeast) : 0), 0,
+  );
+}
+
+// The multiples of the target a layout supplies, and the sum of the same
+// terms, the tie-break.
+function targetMultiple(found) {
+  const supplied = found.goals.filter((g) => g.weight > 0).map((g) => g.after / g.weight);
+  return supplied.length === 0
+    ? { least: 0, total: 0 }
+    : { least: Math.min(...supplied), total: supplied.reduce((sum, one) => sum + one, 0) };
+}
+
 function scoresBetter(a, b) {
+  const missed = [shortfallOf(a), shortfallOf(b)];
+  if (decides(missed[0], missed[1])) return missed[0] < missed[1];
+
   if (a.ranking === 'weighted-sum') {
     const total = (found) => found.goals.reduce(
       (sum, g) => sum + (g.alone > 0 ? (g.weight * g.after) / g.alone : 0), 0,
@@ -1738,11 +1977,16 @@ function scoresBetter(a, b) {
     return total(a) > total(b);
   }
 
+  if (a.ranking === 'ratio') {
+    const mine = targetMultiple(a);
+    const theirs = targetMultiple(b);
+    if (decides(mine.least, theirs.least)) return mine.least > theirs.least;
+    if (decides(mine.total, theirs.total)) return mine.total > theirs.total;
+    // Tied on the ratio, so the goals decide, in the order they are listed.
+  }
+
   for (let k = 0; k < a.goals.length; k += 1) {
-    const mine = a.goals[k].after;
-    const theirs = b.goals[k].after;
-    const scale = Math.max(Math.abs(mine), Math.abs(theirs), 1);
-    if (Math.abs(mine - theirs) > 1e-9 * scale) return mine > theirs;
+    if (decides(a.goals[k].after, b.goals[k].after)) return a.goals[k].after > b.goals[k].after;
   }
   return false;
 }
@@ -1791,16 +2035,79 @@ async function search(body, goal) {
   return JSON.stringify(best);
 }
 
+/* What the engine needs to run this search again, and what the page got for
+   it. Parse::repro reads it back: 'goal=' and 'effort=' are tokens among the
+   village text, '#' lines are notes.
+
+   The worker count is a note, not part of the effort: each restart draws on a
+   stream of its own, so the restarts run undivided reach the same layout. See
+   tests/split.py. */
+function debugReport({ body, goal, effort, found, took, at, answer }) {
+  const line = [];
+  line.push(`# factions-solver rearrange, ${at.toISOString()}`);
+  line.push('# repeat it with: build/Harness repro <this file>');
+  line.push('#');
+  line.push(`# ${found.ranking} ranking over ${howManyWorkers(currentEffort().restarts)} worker(s),`
+    + ` ${found.evaluated.toLocaleString('en-US')} layouts in ${elapsed(took)}`);
+  line.push(`# ${plural(found.moved, 'building')} moved, ${plural(found.terraformed, 'tile')} terraformed`);
+
+  for (const g of found.goals) {
+    const asked = [];
+    if (g.weight !== 1) asked.push(`weight/target ${g.weight}`);
+    if (g.atLeast > 0) asked.push(`at least ${goalValue(g.id, g.atLeast)}`);
+    line.push(`#   ${g.id}: ${goalValue(g.id, g.before)} -> ${goalValue(g.id, g.after)}`
+      + (asked.length > 0 ? ` (${asked.join(', ')})` : ''));
+  }
+
+  if (found.multiples !== undefined) {
+    line.push(`#   multiples of the target: ${fmt(found.multiples.before, 4)} -> ${fmt(found.multiples.after, 4)}`
+      + (found.multiples.binding === undefined ? '' : `, held down by ${found.multiples.binding}`));
+  }
+
+  line.push(`goal=${goal}`);
+  line.push(`effort=${effort}`);
+  line.push(body);
+
+  // The layout it answered with, whose figures are the ones shown.
+  line.push('found');
+  line.push(answer);
+  return `${line.join('\n')}\n`;
+}
+
+// Shown as well as copied: a page served without https has no clipboard.
+debugButton.addEventListener('click', async () => {
+  if (lastSearch === null) return;
+
+  const report = debugReport(lastSearch);
+  debugText.value = report;
+  debugText.hidden = false;
+  debugText.select();
+
+  try {
+    await navigator.clipboard.writeText(report);
+    showStatus(`Debug report copied, ${report.length} characters.`);
+  } catch {
+    showStatus('Report below. Ctrl+C to copy.');
+  }
+});
+
 async function solve() {
   if (anythingStranded()) {
     showStatus('Move the buildings standing on unbuildable terrain first.', true);
     return;
   }
 
-  // A weight is stored against the base goal, whichever variant of it the
-  // search is asked for.
-  const goal = state.goals
-    .map((id) => (state.balance ? `${goalReading(id).id}:${state.weights[id]}` : goalReading(id).id))
+  /* A figure is stored against the base goal, whichever variant is asked for.
+     A minimum is written under every rule, a weight or target only under its
+     own. */
+  const numbers = goalNumbers();
+  const { spec } = ranking();
+  const goal = goalsInPlay()
+    .map((id) => {
+      const asked = goalReading(id).id;
+      const carried = numbers === null ? asked : spec(asked, numbers[id]);
+      return state.minimums[id] > 0 ? `${carried}>=${state.minimums[id]}` : carried;
+    })
     .join(',');
   solveButton.disabled = true;
   solveButton.textContent = 'Searching…';
@@ -1808,13 +2115,24 @@ async function solve() {
   saveNow();
 
   try {
+    // Kept: the layout found is applied to the board a moment later, and the
+    // report carries what went in.
+    const body = serialize();
+    const effort = effortSpec();
+
     // Wall time, so the first search of a session includes starting the
     // workers and loading the engine into each.
     const started = performance.now();
-    const found = JSON.parse(await search(serialize(), goal));
+    const found = JSON.parse(await search(body, goal));
     const took = performance.now() - started;
 
     applyLayout(found.layout);
+
+    // Once the layout is on the board, which is where its text comes from.
+    lastSearch = { body, goal, effort, found, took, at: new Date(), answer: serialize() };
+    debugButton.hidden = false;
+    debugText.hidden = true; // it describes the search before this one
+
     reportSolve(found, took);
 
     state.selected = null;
@@ -1823,8 +2141,8 @@ async function solve() {
   } catch (err) {
     showStatus(reason(err), true);
   } finally {
-    solveButton.disabled = false;
     solveButton.textContent = 'Find a better layout';
+    renderObjectivesSummary(); // it decides whether the button may be pressed
   }
 }
 
@@ -1960,8 +2278,11 @@ function controls() {
     terraform: { ...state.terraform },
     effort: state.effort,
     customEffort: { ...state.customEffort },
-    balance: state.balance,
+    ranking: state.ranking,
     weights: { ...state.weights },
+    targets: { ...state.targets },
+    minimums: { ...state.minimums },
+    used: { ...state.used },
     shareModifiers: shareModifiers.checked,
     modifiersOpen: modifiersPanel.open,
   };
@@ -2028,10 +2349,21 @@ function restoreFromStorage() {
     if (Number.isInteger(value) && value >= 1) state.customEffort[name] = value;
   }
 
-  state.balance = view.balance === true;
+  // `balance` named the weighted rule before the ratio one existed.
+  if (RANKINGS.some((one) => one.key === view.ranking)) state.ranking = view.ranking;
+  else if (view.balance === true) state.ranking = 'weighted';
+
   for (const { id } of OBJECTIVES) {
-    const weight = view.weights?.[id];
-    if (Number.isFinite(weight) && weight >= 0) state.weights[id] = weight;
+    for (const [held, stored] of [[state.weights, view.weights], [state.targets, view.targets], [state.minimums, view.minimums]]) {
+      const value = stored?.[id];
+      if (Number.isFinite(value) && value >= 0) held[id] = value;
+    }
+    if (typeof view.used?.[id] === 'boolean') state.used[id] = view.used[id];
+  }
+
+  // No search can run with every goal off.
+  if (Object.values(state.used).every((on) => !on)) {
+    for (const { id } of OBJECTIVES) state.used[id] = true;
   }
 
   return view;
@@ -3286,7 +3618,7 @@ modifiersPanel.addEventListener('toggle', saveSoon);
 
 if (restored !== null) {
   document.getElementById('show-output').checked = state.showOutput;
-  balanceBox.checked = state.balance;
+  rankingSelect.value = state.ranking;
   soldierModeSelect.value = state.soldierMode;
   workerModeSelect.value = state.workerMode;
   renderUnitChoice();

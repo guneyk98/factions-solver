@@ -153,6 +153,7 @@ async function boot(seed, { withEngine = true, after = null, waitMs = 400, until
     terrains: tiles.map((el) => el.title.split(',')[0]),
     steppedBack: w.document.body.dataset.steppedBack ?? '',
     solved: read('solve-result'),
+    debug: w.document.getElementById('solve-debug-text')?.value ?? '',
     goals: [...w.document.querySelectorAll('.goal')].map((one) => one.dataset.goal),
     modifiers: Object.fromEntries([...w.document.querySelectorAll('[data-mod]')].map((i) => [i.dataset.mod, i.value])),
     script: w.document.getElementById('pull-script')?.value ?? '',
@@ -378,6 +379,32 @@ async function main() {
   if (!/ in \d[\d.,]* ?(ms|s)\./.test(searched.solved)) {
     complain('running a search', `the time is not readable in "${searched.solved}"`);
   }
+
+  /* 9a. The debug report of the search just run. It is written out for
+         tests/run.sh, which hands it to the engine: a report the engine
+         cannot read back is a report that repeats nothing. */
+  const reported = await boot({ local: { 'factions-solver/v2': JSON.stringify({ v: 1, layout: body }) } }, {
+    waitMs: 30000,
+    until: (w) => {
+      const box = w.document.getElementById('solve-debug-text');
+      if (box.value !== '') return true;
+      if (w.document.getElementById('solve-result').hidden === false) {
+        w.document.getElementById('solve-debug').click();
+      }
+      return false;
+    },
+    after: (w) => {
+      w.document.getElementById('view-solve').click();
+      w.document.getElementById('solve').click();
+    },
+  });
+  sound('the debug report of a search', reported);
+  for (const wanted of ['goal=', 'effort=', 'game=']) {
+    if (!reported.debug.includes(wanted)) {
+      complain('the debug report of a search', `carries no '${wanted}'`);
+    }
+  }
+  fs.writeFileSync(path.join(root, 'build/debug-report.txt'), reported.debug);
 
   /* 9b. The same search, allowed to terraform: it reports the tiles it changed
          and the board comes back holding that terrain. */
