@@ -1144,24 +1144,6 @@ function aurasOn(board, anchor, cells) {
     });
 }
 
-/* The auras over every quantity reaching a tile, each as the factor it came
-   to. These multiply whatever a building on the tile contributes, the aura it
-   provides its own neighbours included. Written in a first pass, so none of
-   them multiplies another. */
-function aurasOverEverything(board, cells) {
-  if (!board.result) return [];
-
-  return board.result.modifiers
-    .filter((aura) => aura.rateOrCapacity === 'both')
-    .map((aura) => ({ from: aura.from, value: 1 + cells.reduce((sum, cell) => sum + aura.values[cell], 0) }))
-    .filter((aura) => aura.value !== 1);
-}
-
-// What multiplies one aura a building provides; an over-everything aura, nothing.
-function auraBoostOn(effect, overEverything) {
-  return effect.rateOrCapacity === 'both' ? 1 : overEverything;
-}
-
 /* The auras reaching a tile that multiply one quantity, as
    Rules::aurasThatMultiply picks them: over efficiency multiplies every
    quantity, one named for a quantity that one alone, one over both a rate and
@@ -1339,9 +1321,7 @@ function buildingEffects(board, anchor, level, auraRows = []) {
   }
 
   /* What this building gives its neighbours, at what the engine wrote to
-     their tiles: an aura not covering every quantity is multiplied by the
-     ones that do. */
-  const overEverything = aurasOverEverything(board, cells).reduce((product, aura) => product * aura.value, 1);
+     their tiles: the auras reaching this tile do not scale it. */
   const gives = effects.filter((e) => e.where === 'provides').map((e, n) => {
     const reaches = e.on.length === 0
       ? 'every neighbour'
@@ -1349,7 +1329,7 @@ function buildingEffects(board, anchor, level, auraRows = []) {
         ? `${want.toLowerCase()} buildings`
         : (BUILDING_BY_KEY.get(want)?.name ?? want).toLowerCase())).join(', ')}`;
 
-    return effectRow(e, level, tile.seal, '', auraBoostOn(e, overEverything), false, effects,
+    return effectRow(e, level, tile.seal, '', 1, false, effects,
       `data-tile-aura="${anchor}|${n}"`)
       .replace('</li>', `<span class="fx-reaches">to ${reaches}</span></li>`);
   });
@@ -2170,8 +2150,7 @@ function showTileTotal(anchor, quantity, rateOrCapacity) {
   showChains(found.title, found.chains);
 }
 
-/* What one aura a building provides comes to: an aura that does not cover
-   every quantity is multiplied by the ones that do. */
+// What one aura a building provides comes to.
 function showTileAura(anchor, nth) {
   const owner = lastBoard?.tiles?.[anchor];
   if (owner === undefined) return;
@@ -2185,27 +2164,18 @@ function showTileAura(anchor, nth) {
   const times = effectTimes(effect, level, owner.seal, 1, effects);
   const named = BUILDING_BY_KEY.get(owner.building)?.name ?? owner.building;
 
-  const auras = effect.rateOrCapacity === 'both' ? [] : aurasOverEverything(lastBoard, cells);
-  const auraTerms = auras.map((aura) => ({
-    label: `${BUILDING_BY_KEY.get(aura.from)?.name ?? aura.from} aura`,
-    value: aura.value,
-    kind: 'factor',
-  }));
-  const reaching = auras.reduce((product, aura) => product * aura.value, 1);
-
   // A factor reaches neighbours as what it adds above one; a share already is.
   const terms = effect.amount === 'multiply'
     ? [
       { label: `${named} lvl ${level}`, value: 1 + (effect.value - 1) * times, kind: 'base' },
       { label: 'to share', value: -1, kind: 'added_before' },
-      ...auraTerms,
       { label: 'to factor', value: 1, kind: 'added_after' },
     ]
-    : [{ label: `${named} lvl ${level}`, value: effect.value * times, kind: 'base' }, ...auraTerms];
+    : [{ label: `${named} lvl ${level}`, value: effect.value * times, kind: 'base' }];
 
   const total = effect.amount === 'multiply'
-    ? 1 + (effect.value - 1) * times * reaching
-    : effect.value * times * reaching;
+    ? 1 + (effect.value - 1) * times
+    : effect.value * times;
 
   openBreakdown = { tileAura: { anchor, nth } };
   showChains(`${effectLabel(effect)} aura · ${named} @ ${anchor % WIDTH},${Math.floor(anchor / WIDTH)}`, [{ total, terms }]);

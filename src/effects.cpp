@@ -192,10 +192,6 @@ Rules::Rules(const Game::Config& config)
         }
     }
 
-    for (std::size_t auraIndex = 0; auraIndex < auras_.size() && auraIndex < MaxAuras; ++auraIndex)
-        if (auras_[auraIndex].rateOrCapacity == Game::RateOrCapacity::Both)
-            over_everything_ |= 1u << auraIndex;
-
     for (std::size_t buildingIndex = 0; buildingIndex < Enum::Count<Building>; ++buildingIndex)
         for (std::size_t n = 0; n < MaxEffects; ++n)
             if (const int slot = aura_of_[buildingIndex][n]; slot >= 0 && static_cast<std::size_t>(slot) < MaxAuras)
@@ -381,29 +377,18 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
        neighbour receives it once, however many of its tiles are adjacent, and
        never from a building of its own kind.
 
-       It runs twice. The auras that apply to every quantity go first, because
-       they multiply what the remaining auras contribute: an obelisk next to a
-       furnace increases what that furnace contributes to an adjacent mine. */
-    const auto applyAuras = [&](bool overEverythingPass) {
+       What a building provides does not depend on the auras reaching it: an
+       aura over every quantity multiplies a neighbour's own output, not the
+       aura that neighbour provides in turn. */
+    const auto applyAuras = [&]() {
         forEachTile(village, [&](std::size_t i, const Tile& tile) {
-            const std::uint32_t providing = rules.aurasProvidedBy(tile.building) & (overEverythingPass ? rules.aurasOverEverything() : ~rules.aurasOverEverything());
+            const std::uint32_t providing = rules.aurasProvidedBy(tile.building);
             if (providing == 0)
                 return;
 
             const auto effects = rules.effects(tile.building);
             const auto [cells, count] = tilesCoveredBy(i, tile);
             const double level = effectiveLevelOf(tile);
-
-            double aurasOverThisSource = 1.0;
-            if (!overEverythingPass) {
-                for (std::uint32_t remaining = rules.aurasOverEverything(); remaining != 0; remaining &= remaining - 1) {
-                    const auto auraIndex = static_cast<std::size_t>(std::countr_zero(remaining));
-                    double shareReachingHere = 0.0;
-                    for (std::size_t cell = 0; cell < count; ++cell)
-                        shareReachingHere += auraGrid[cells[cell]][auraIndex];
-                    aurasOverThisSource *= 1.0 + shareReachingHere;
-                }
-            }
 
             for (std::size_t n = 0; n < effects.size(); ++n) {
                 const int slot = rules.auraSlotOfEffect(tile.building, n);
@@ -412,7 +397,7 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
 
                 const Game::Effect& effect = effects[n];
                 const std::uint32_t targets = rules.targetsOfEffect(tile.building, n);
-                const double value = auraShareOf(effect) * (effect.perLevel ? level : 1.0) * aurasOverThisSource;
+                const double value = auraShareOf(effect) * (effect.perLevel ? level : 1.0);
 
                 /* Added once per building reached, however many pairs of tiles
                    are adjacent: a town hall along the side of a market is
@@ -437,8 +422,7 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
         });
     };
 
-    applyAuras(true);
-    applyAuras(false);
+    applyAuras();
 
     // Every quantity one building accumulates, before the auras over it.
     const auto runningTotalsFor = [&](const Tile& tile, const std::array<std::size_t, MaxFootprint>& cells,

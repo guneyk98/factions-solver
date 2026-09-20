@@ -85,12 +85,6 @@ public:
     std::size_t runningTotalOfEffect(Building b, std::size_t nth) const { return running_total_of_effect_[static_cast<std::size_t>(b)][nth]; }
     QuantityAndRateOrCapacity quantityAt(Building b, std::size_t which) const { return quantity_at_[static_cast<std::size_t>(b)][which]; }
 
-    /* The auras that apply to every quantity, which the api writes as
-       `efficiency`. They are computed before the others, because they multiply
-       what those others contribute: an obelisk next to a furnace increases
-       what that furnace contributes to an adjacent mine. */
-    std::uint32_t aurasOverEverything() const { return over_everything_; }
-
     // The auras this building provides, so a tile providing none can be
     // skipped in that pass.
     std::uint32_t aurasProvidedBy(Building b) const { return provides_[static_cast<std::size_t>(b)]; }
@@ -122,7 +116,6 @@ private:
     std::array<std::uint8_t, Enum::Count<Building>> running_total_count_{};
     std::vector<Aura> auras_;
     std::array<std::array<std::uint32_t, Enum::Count<Game::RateOrCapacity>>, Enum::Count<Game::Quantity>> multiply_{};
-    std::uint32_t over_everything_ = 0;
     std::array<std::uint32_t, Enum::Count<Building>> provides_{};
     double market_tax_ = 0.0;
 };
