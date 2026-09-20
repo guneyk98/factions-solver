@@ -26,8 +26,8 @@ constexpr std::array Table{
     Info{"soldiers.production.attack", "effective attack soldier production", [](const Output& output) { return effectiveSoldiers(output, efficiencyOf(output, Efficiency::Attack)); }},
     Info{"soldiers.production.defense", "effective defense soldier production", [](const Output& output) { return effectiveSoldiers(output, efficiencyOf(output, Efficiency::Defense)); }},
 
-    /* The workers above, scaled by worker efficiency, and then by map or
-       project efficiency on top of it. */
+    /* The workers above, scaled by worker efficiency, with project efficiency
+       summed with it and map efficiency multiplying on top of it. */
     Info{"workers.production.worker", "effective worker production", [](const Output& output) { return effectiveWorkers(output, Efficiency::Worker); }},
     Info{"workers.production.map", "effective map worker production", [](const Output& output) { return effectiveWorkers(output, Efficiency::Map); }},
     Info{"workers.production.projects", "effective project worker production", [](const Output& output) { return effectiveWorkers(output, Efficiency::Projects); }},

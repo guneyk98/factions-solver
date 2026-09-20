@@ -283,8 +283,8 @@ static_assert(Enum::allDifferent(Ids), "each efficiency needs an id of its own")
 constexpr bool scalesSoldiers(Efficiency efficiency) { return efficiency == Efficiency::Attack || efficiency == Efficiency::Defense; }
 
 /* The three that scale worker production into effective workers. Worker
-   efficiency is a factor in all three; map and project efficiency multiply on
-   top of it. */
+   efficiency is a factor in all three; project efficiency is summed with it,
+   map efficiency multiplies on top of it. */
 constexpr bool scalesWorkers(Efficiency efficiency) { return efficiency == Efficiency::Worker || efficiency == Efficiency::Map || efficiency == Efficiency::Projects; }
 
 /* Which of the five the quest multiplier applies to. Taken from the api,
@@ -587,13 +587,16 @@ constexpr double unitsOf(const Output& output, Unit unit)
     return output.units[static_cast<std::size_t>(unit)];
 }
 
-/* Worker production scaled by efficiency. Worker efficiency multiplies every
-   reading; map and project efficiency multiply on top of it, so passing
-   Efficiency::Worker applies worker efficiency alone. */
+/* Worker production scaled by efficiency. Worker efficiency applies to every
+   reading; project efficiency is summed with it, map efficiency multiplies on
+   top of it, so passing Efficiency::Worker applies worker efficiency alone. */
 constexpr double effectiveWorkers(const Output& output, Efficiency efficiency)
 {
+    const double worker = efficiencyOf(output, Efficiency::Worker);
+    if (efficiency == Efficiency::Projects)
+        return output.production[Resource::Workers] * (1 + worker + efficiencyOf(output, Efficiency::Projects));
     const double onTop = efficiency == Efficiency::Worker ? 1.0 : 1 + efficiencyOf(output, efficiency);
-    return output.production[Resource::Workers] * (1 + efficiencyOf(output, Efficiency::Worker)) * onTop;
+    return output.production[Resource::Workers] * (1 + worker) * onTop;
 }
 
 /* Every modifier applying to one quantity, one value per ModifierSource. They

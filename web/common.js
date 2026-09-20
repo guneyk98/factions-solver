@@ -291,8 +291,8 @@ const GOAL_ORDER = ['wood.production', 'iron.production', 'soldiers.production',
 const SOLDIER_EFFICIENCIES = EFFICIENCIES.filter((e) => e.soldiers);
 
 /* The three that scale worker production. Worker efficiency is a factor in
-   all three; map and project efficiency multiply on top of it, so the worker
-   entry is worker efficiency alone. */
+   all three; project efficiency is summed with it, map efficiency multiplies
+   on top of it, so the worker entry is worker efficiency alone. */
 const WORKER_EFFICIENCIES = EFFICIENCIES.filter((e) => e.workers);
 
 // wood/t and iron/t after the market tax.
@@ -1489,7 +1489,9 @@ function buildStatsPanel() {
     row(workers, `effective-workers-${e.key}`, short, 'workers-value',
       e.key === 'worker'
         ? 'Workers/t times worker efficiency'
-        : `Workers/t times worker efficiency times ${e.name.toLowerCase()} efficiency`,
+        : e.key === 'projects'
+          ? 'Workers/t times one plus worker efficiency plus projects efficiency'
+          : `Workers/t times worker efficiency times ${e.name.toLowerCase()} efficiency`,
       '0');
   }
 
@@ -1753,7 +1755,9 @@ function buildBreakdown(id) {
     };
   }
 
-  // production scaled by its efficiencies; worker efficiency feeds all three
+  /* production scaled by its efficiencies; worker efficiency feeds all three,
+     with project efficiency summed with it and map efficiency multiplying on
+     top of it */
   if (parts[0] === 'effective' && parts.length === 3) {
     const [, which, key] = parts;
     const efficiencyId = (of) => `${SCHEMA.efficiencyField}.${of}`;
@@ -1762,15 +1766,17 @@ function buildBreakdown(id) {
     const terms = [{
       label: `${resource}/t`, value: lastResult.production[resource], kind: 'base', from: `${resource}.${RATE}`,
     }];
-    const scaledBy = (of) => ({
-      label: `${of} efficiency`, value: 1 + lastResult.efficiency[of], kind: 'factor', from: efficiencyId(of),
+    const scaledBy = (of, kind) => ({
+      label: `${of} efficiency`, value: kind === 'share' ? lastResult.efficiency[of] : 1 + lastResult.efficiency[of], kind, from: efficiencyId(of),
     });
 
-    if (which === 'workers') {
-      terms.push(scaledBy('worker'));
-      if (key !== 'worker') terms.push(scaledBy(key));
+    if (which !== 'workers') {
+      terms.push(scaledBy(key, 'factor'));
+    } else if (key === 'projects') {
+      terms.push(scaledBy('worker', 'share'), scaledBy('projects', 'share'));
     } else {
-      terms.push(scaledBy(key));
+      terms.push(scaledBy('worker', 'factor'));
+      if (key !== 'worker') terms.push(scaledBy(key, 'factor'));
     }
     return { total: lastResult.effective[which][key], terms };
   }
@@ -1987,7 +1993,7 @@ function breakdownName(id, tileIndex) {
   const [first, second, third] = id.split('.');
 
   const named = first === SCHEMA.efficiencyField ? `${second} efficiency`
-    : first === 'effective' ? `${second}/t × ${third} efficiency`
+    : first === 'effective' ? `${second}/t ${third === 'projects' ? '+' : '×'} ${third} efficiency`
       : first === 'market' ? (second === 'tax' ? 'market tax' : `${second} sold`)
         : second === SCHEMA.powerField ? `${first} power`
           : second === CAPACITY ? `${first} cap`
