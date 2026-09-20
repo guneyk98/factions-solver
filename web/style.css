@@ -1828,7 +1828,8 @@ details.panel summary h2 {
 
 .tile-head {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* ground, the terraformed toggle where there is one, then the coordinates */
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
@@ -1851,6 +1852,41 @@ details.panel summary h2 {
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* The terraformed toggle. */
+.tile-terraformed {
+  justify-self: start;
+  padding: 3px 7px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tile-terraformed:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.tile-terraformed.on {
+  border-style: solid;
+  border-color: var(--workers);
+  color: var(--workers);
+}
+
+/* What the perk added to the rows above. */
+.fx-fertile {
+  display: block;
+  padding-top: 2px;
+  font-size: 11px;
+  color: var(--workers);
 }
 
 .tile-face {
@@ -2289,3 +2325,182 @@ details.panel summary h2 {
 }
 
 
+
+/* ---------- how a figure was reached ---------- */
+
+/* A figure a click explains. */
+.fx-explained {
+  cursor: pointer;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+.fx-explained:hover {
+  text-decoration-style: solid;
+}
+
+.breakdown-modal .modal-card {
+  width: 460px;
+}
+
+/* The arithmetic in one line, above the terms of each stage. */
+.breakdown-sum {
+  margin: 0 0 14px;
+  padding: 9px 11px;
+  background: color-mix(in srgb, var(--line) 30%, transparent);
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-sum b {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.breakdown-terms {
+  padding: 0;
+  border-left: none;
+  background: none;
+}
+
+.breakdown-terms li {
+  line-height: 1.85;
+}
+
+.breakdown-terms .fx-what {
+  flex: 1 1 auto;
+  white-space: normal;
+}
+
+.breakdown-terms .fx-value {
+  flex: 0 0 90px;
+  margin-left: 0;
+  text-align: right;
+}
+
+.breakdown-terms .fx-cols {
+  margin-top: 11px;
+  margin-bottom: 1px;
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+.breakdown-terms .fx-cols:first-child {
+  margin-top: 0;
+}
+
+/* A neutral term, shown only when asked for. */
+.breakdown-nil,
+.breakdown-nil .fx-value {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.breakdown-link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.breakdown-foot {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.breakdown-foot label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* One chain per route a row reaches the village by. */
+.breakdown-heading {
+  margin: 18px 0 7px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.breakdown-heading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* A chain that does not come to the engine's figure. */
+.breakdown-sum.breakdown-off {
+  background: color-mix(in srgb, var(--soldiers) 18%, transparent);
+}
+
+.breakdown-warning {
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--soldiers);
+}
+
+/* A term made of others. */
+.breakdown-expand {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.breakdown-expand:hover {
+  color: var(--text);
+}
+
+.breakdown-caret {
+  flex: 0 0 auto;
+  width: 8px;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+/* An open term heads its parts. */
+.breakdown-terms li.breakdown-open {
+  font-weight: 600;
+}
+
+.breakdown-terms li.breakdown-open .breakdown-caret {
+  color: var(--text);
+}
+
+/* One rule down the side of a term's parts. */
+.breakdown-terms li.breakdown-parts {
+  display: block;
+  margin: 1px 0 5px 4px;
+  padding: 0;
+}
+
+.breakdown-parts > .breakdown-terms {
+  margin: 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: none;
+  font-weight: 400;
+}

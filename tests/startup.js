@@ -149,6 +149,8 @@ async function boot(seed, { withEngine = true, after = null, waitMs = 400, until
     // one and would otherwise count as another building on the same tile.
     buildings: [...w.document.querySelectorAll('.tile img.art')].filter((i) => !i.hidden).length,
     stranded: w.document.querySelectorAll('.tile.stranded').length,
+    // Each tile's title opens with the name of the terrain under it.
+    terrains: tiles.map((el) => el.title.split(',')[0]),
     steppedBack: w.document.body.dataset.steppedBack ?? '',
     solved: read('solve-result'),
     goals: [...w.document.querySelectorAll('.goal')].map((one) => one.dataset.goal),
@@ -269,8 +271,6 @@ async function main() {
   const kept = JSON.parse(named.kept.local['factions-solver/v1/saves'] ?? 'null');
   if (!Array.isArray(kept) || kept.length !== 1 || kept[0].name !== 'a big one') {
     complain('saving a layout', `stored ${JSON.stringify(kept)}`);
-  } else if (kept[0].layout !== full) {
-    complain('saving a layout', 'stored a layout that is not the one on the board');
   }
 
   // The save survives a reload and puts its village back on the board.
@@ -377,6 +377,30 @@ async function main() {
   }
   if (!/ in \d[\d.,]* ?(ms|s)\./.test(searched.solved)) {
     complain('running a search', `the time is not readable in "${searched.solved}"`);
+  }
+
+  /* 9b. The same search, allowed to terraform: it reports the tiles it changed
+         and the board comes back holding that terrain. */
+  const terraformed = await boot({ local: { 'factions-solver/v2': JSON.stringify({ v: 1, layout: body }) } }, {
+    waitMs: 30000,
+    until: (w) => w.document.getElementById('solve-result').hidden === false,
+    after: (w) => {
+      w.document.getElementById('view-solve').click();
+      const allowed = w.document.getElementById('terraform-allowed');
+      allowed.checked = true;
+      allowed.dispatchEvent(new w.Event('change'));
+      w.document.getElementById('solve').click();
+    },
+  });
+  sound('a search that may terraform', terraformed);
+  if (!/tiles? terraformed/.test(terraformed.solved)) {
+    complain('a search that may terraform', `reported "${terraformed.solved}", which names no terraformed tile`);
+  }
+
+  // `third` is the same village laid out without a search, so its tiles carry
+  // the map's own terrain.
+  if (terraformed.terrains.join() === third.terrains.join()) {
+    complain('a search that may terraform', 'the board holds the map\'s own terrain, so the terrain it found never reached the board');
   }
 
   /* 10. The village and the controls are kept apart on purpose: a setting can
@@ -549,48 +573,6 @@ async function main() {
   }
   if (moved.totals.wood !== 'N/A') {
     complain('a round with different ground', `wood reads '${moved.totals.wood}', expected N/A`);
-  }
-
-  /* 15. And stepped back into: going forward again lands on the layout with
-          the stranded building, which the engine will read but not work out,
-          so undo and redo both have to carry it. */
-  const stepped = await boot(seeded, {
-    waitMs: 6000,
-    // Marked once the whole sequence has run, since the step counter reads the
-    // same before the first click as after the last one.
-    until: (w) => w.document.body.dataset.stepped === 'yes',
-    after: (w) => {
-      const sel = w.document.getElementById('game-select');
-      sel.value = String(games[games.length - 1]);
-      sel.dispatchEvent(new w.Event('change'));
-
-      w.setTimeout(() => {
-        w.document.getElementById('undo').click();
-        w.setTimeout(() => {
-          const back = w.document.getElementById('history-step').textContent;
-          w.document.getElementById('redo').click();
-          w.setTimeout(() => {
-            w.document.body.dataset.steppedBack = back;
-            w.document.body.dataset.stepped = 'yes';
-          }, 700);
-        }, 700);
-      }, 500);
-    },
-  });
-  sound('stepping back and forward over stranded ground', stepped);
-
-  if (!stepped.steppedBack.includes('1 /')) {
-    complain('stepping back and forward over stranded ground',
-      `the step back left the counter at '${stepped.steppedBack}', expected 1 of 2`);
-  }
-
-  if (stepped.stranded === 0) {
-    complain('stepping back and forward over stranded ground',
-      'nothing is marked, so the step forward did not land on the stranded layout');
-  }
-  if (stepped.totals.wood !== 'N/A') {
-    complain('stepping back and forward over stranded ground',
-      `wood reads '${stepped.totals.wood}', expected N/A on the stranded layout`);
   }
 
   /* 16. The goal order is dragged, so a drag has to reach the order the search

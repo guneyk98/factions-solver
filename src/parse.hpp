@@ -54,7 +54,8 @@ struct Goals {
 // is what chooses the ranking.
 std::expected<Goals, Error> goals(std::string_view spec);
 
-// 'name=value' settings, comma separated, over SearchLimits' defaults.
+/* 'name=value' settings, comma separated, over SearchLimits' defaults. Every
+   one is a whole number, except that 'terraform' also accepts 'unlimited'. */
 std::expected<SearchLimits, Error> effort(std::string_view spec);
 
 // A simulator run: the village it starts from, what the player holds then,

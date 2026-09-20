@@ -40,6 +40,13 @@
         <input id="village-level" type="number" min="1" max="99" value="5">
       </label>
 
+      <label class="field">
+        Fertile grounds
+        <span class="help"
+          title="The fertile grounds perk: +5% to a terrain bonus per point, on tiles you terraformed. Mark those tiles in the tile panel.">?</span>
+        <input id="terrain-bonus" type="number" min="0" max="100" step="5" value="0">
+      </label>
+
       <div class="field">
         Buildings
         <span id="building-count" class="count">0 / 0</span>
@@ -104,6 +111,17 @@
         </label>
         <label class="checkbox goal-mode">
           <input type="checkbox" id="goal-market"> Wood/t and Iron/t after market tax
+        </label>
+        <label class="checkbox goal-mode">
+          <input type="checkbox" id="terraform-allowed"> Terraform the tiles buildings stand on <span class="help"
+            title="Lets the search change a tile's terrain to one the building standing on it has a bonus for. Sea and high mountain are never changed, and a terraform the output does not depend on is undone.">?</span>
+        </label>
+        <label class="goal-reading" id="terraform-budget-row" hidden>
+          <span>Terraforms the search may use</span>
+          <input type="number" id="terraform-tiles" min="0" max="100" step="1">
+        </label>
+        <label class="checkbox goal-mode" id="terraform-unlimited-row" hidden>
+          <input type="checkbox" id="terraform-unlimited"> As many as the arrangement can use
         </label>
         <button type="button" id="solve">Find a better layout</button>
         <div class="solve-result" id="solve-result" hidden></div>

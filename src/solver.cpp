@@ -135,13 +135,78 @@ ScoreDifference compareWeightedSum(const Score& a, const Score& b)
     return ScoreDifference{};
 }
 
+static_assert(MaxFootprint == 4, "a terrain profile carries one entry per footprint cell");
+
+/* The terrain under one building, one entry per cell of its footprint in the
+   order footprintOf lists them. Unchanged keeps the map's terrain for that
+   cell; any other value is a terraformed tile. */
+inline constexpr std::uint8_t Unchanged = 0xFF;
+
+struct TerrainAssignment {
+    std::array<std::uint8_t, MaxFootprint> cell{Unchanged, Unchanged, Unchanged, Unchanged};
+
+    friend bool operator==(const TerrainAssignment&, const TerrainAssignment&) = default;
+};
+
 struct PlacedBuilding {
     Building building = Building::None;
     Seal seal = Seal::None;
     int level = 0;
     Orientation orientation = Orientation::East;
     std::size_t anchor = 0;
+    TerrainAssignment terrain;
 };
+
+/* The terrains a building's own Where::Terrain effects name, which are the
+   only ones terraforming under it can change the output by. An effect naming
+   no terrain applies on every terrain, so it names none here. */
+std::vector<Terrain> bonusTerrainsOf(const Rules& rules, Building building)
+{
+    std::uint32_t mask = 0;
+    const auto effects = rules.effects(building);
+    for (std::size_t n = 0; n < effects.size(); ++n)
+        if (effects[n].where == Game::Where::Terrain && !effects[n].on.empty())
+            mask |= rules.targetsOfEffect(building, n);
+
+    std::vector<Terrain> named;
+    for (const Terrain terrain : Enum::values<Terrain>())
+        if ((mask & Rules::bit(terrain)) != 0 && Terrains::buildable(terrain))
+            named.push_back(terrain);
+    return named;
+}
+
+/* Every combination of terrains the footprint's cells can be left on or
+   terraformed to, as a mixed-radix enumeration. The first leaves every cell
+   on the map's own terrain, which is the assignment a search without
+   terraforming uses. */
+std::vector<TerrainAssignment> terrainAssignmentsOf(const Rules& rules, Building building)
+{
+    const std::vector<Terrain> named = bonusTerrainsOf(rules, building);
+    if (named.empty())
+        return {};
+
+    const std::size_t cells = footprintOf(0, 0, rules.shapeOf(building), Orientation::East).count;
+    const std::size_t options = named.size() + 1;
+
+    std::size_t total = 1;
+    for (std::size_t c = 0; c < cells; ++c)
+        total *= options;
+
+    std::vector<TerrainAssignment> assignments;
+    assignments.reserve(total);
+    for (std::size_t n = 0; n < total; ++n) {
+        TerrainAssignment assignment;
+        std::size_t remaining = n;
+        for (std::size_t c = 0; c < cells; ++c) {
+            const std::size_t choice = remaining % options;
+            remaining /= options;
+            if (choice != 0)
+                assignment.cell[c] = static_cast<std::uint8_t>(named[choice - 1]);
+        }
+        assignments.push_back(assignment);
+    }
+    return assignments;
+}
 
 std::vector<PlacedBuilding> placedBuildings(const Village& village)
 {
@@ -149,7 +214,7 @@ std::vector<PlacedBuilding> placedBuildings(const Village& village)
     for (std::size_t i = 0; i < TileCount; ++i) {
         const Tile& tile = village[i];
         if (tile.building != Building::None)
-            placed.push_back(PlacedBuilding{tile.building, tile.seal, tile.level, tile.orientation, i});
+            placed.push_back(PlacedBuilding{tile.building, tile.seal, tile.level, tile.orientation, i, TerrainAssignment{}});
     }
     return placed;
 }
@@ -162,10 +227,35 @@ Village terrainOnly(const Village& village)
     return ground;
 }
 
-void writePlacements(Village& village, const Village& ground, const std::vector<PlacedBuilding>& placed)
+/* The tiles a placement covers, in the order a terrain assignment indexes
+   them. Cells off the grid are dropped, so a caller that has not checked the
+   placement fits sees fewer cells rather than reading outside the village. */
+void forEachCoveredTile(const Rules& rules, const PlacedBuilding& one, auto&& visit)
+{
+    const auto [x, y] = Village::coordinates(one.anchor);
+    std::size_t index = 0;
+    for (const auto& [cx, cy] : footprintOf(static_cast<int>(x), static_cast<int>(y), rules.shapeOf(one.building), one.orientation)) {
+        if (isInside(cx, cy))
+            visit(Village::index(static_cast<std::size_t>(cx), static_cast<std::size_t>(cy)), index);
+        ++index;
+    }
+}
+
+void writePlacements(const Rules& rules, Village& village, const Village& ground, const std::vector<PlacedBuilding>& placed)
 {
     village = ground;
     for (const PlacedBuilding& one : placed) {
+        forEachCoveredTile(rules, one, [&](std::size_t cell, std::size_t index) {
+            if (one.terrain.cell[index] == Unchanged)
+                return;
+
+            const auto chosen = static_cast<Terrain>(one.terrain.cell[index]);
+            // a changed tile is terraformed ground, which terrainBonusFactor acts on
+            if (chosen != ground[cell].terrain)
+                village.setTerraformed(cell, true);
+            village[cell].terrain = chosen;
+        });
+
         Tile& tile = village[one.anchor];
         tile.building = one.building;
         tile.seal = one.seal;
@@ -240,6 +330,15 @@ public:
                 rotatable_.push_back(p);
             if (initial_[p].seal != Seal::None)
                 ++sealed_count_;
+
+            if (limits_.terraform == Terraforming::None)
+                continue;
+
+            const auto building = static_cast<std::size_t>(initial_[p].building);
+            if (assignments_[building].empty())
+                assignments_[building] = terrainAssignmentsOf(rules_, initial_[p].building);
+            if (assignments_[building].size() > 1)
+                terraformable_.push_back(p);
         }
 
         for (std::size_t i = 0; i < TileCount; ++i)
@@ -247,7 +346,7 @@ public:
                 buildable_tiles_.push_back(i);
 
         working_ = terrain_;
-        written_anchors_.reserve(initial_.size());
+        written_cells_.reserve(initial_.size() * MaxFootprint);
     }
 
     SearchResult run()
@@ -278,7 +377,10 @@ public:
             }
         }
 
-        writePlacements(result.village, terrain_, best);
+        revertTerraformsWithoutEffect(best, best_score);
+
+        writePlacements(rules_, result.village, terrain_, best);
+        result.terraformed = terraformedTiles(best);
         result.before.assign(initial_score.value.begin(), initial_score.value.begin() + static_cast<std::ptrdiff_t>(initial_score.count));
         result.after.assign(best_score.value.begin(), best_score.value.begin() + static_cast<std::ptrdiff_t>(best_score.count));
         result.evaluated = evaluated_;
@@ -298,23 +400,59 @@ private:
         return scoreOf(runEffects(rules_, modifiers_, working_));
     }
 
-    /* working_ still holds the previous arrangement, so only its anchors need
-       clearing before the next one is written: an arrangement occupies a few
-       dozen tiles, where copying the whole village would write all hundred. */
+    /* working_ still holds the previous arrangement, so only the tiles it wrote
+       need clearing before the next one is written: an arrangement occupies a
+       few dozen tiles, where copying the whole village would write all hundred.
+       Clearing restores the map's own terrain, which undoes the terraforming
+       the previous arrangement wrote as well as the buildings it wrote. */
     void writeIntoWorking(const std::vector<PlacedBuilding>& placed)
     {
-        for (const std::size_t anchor : written_anchors_)
-            working_[anchor] = Tile{working_[anchor].terrain};
-        written_anchors_.clear();
+        for (const std::size_t cell : written_cells_) {
+            working_[cell] = Tile{terrain_[cell].terrain};
+            working_.setTerraformed(cell, terrain_.terraformed(cell));
+        }
+        written_cells_.clear();
 
         for (const PlacedBuilding& one : placed) {
+            if (one.terrain != TerrainAssignment{}) {
+                forEachCoveredTile(rules_, one, [&](std::size_t cell, std::size_t index) {
+                    if (one.terrain.cell[index] == Unchanged)
+                        return;
+
+                    const auto chosen = static_cast<Terrain>(one.terrain.cell[index]);
+                    if (chosen != terrain_[cell].terrain)
+                        working_.setTerraformed(cell, true);
+                    working_[cell].terrain = chosen;
+                    written_cells_.push_back(cell);
+                });
+            }
+
             Tile& tile = working_[one.anchor];
             tile.building = one.building;
             tile.seal = one.seal;
             tile.level = one.level;
             tile.orientation = one.orientation;
-            written_anchors_.push_back(one.anchor);
+            written_cells_.push_back(one.anchor);
         }
+    }
+
+    // Tiles this arrangement stands on whose terrain is not the map's own.
+    int terraformedTiles(const std::vector<PlacedBuilding>& placed) const
+    {
+        int count = 0;
+        for (const PlacedBuilding& one : placed)
+            forEachCoveredTile(rules_, one, [&](std::size_t cell, std::size_t index) {
+                if (one.terrain.cell[index] != Unchanged && static_cast<Terrain>(one.terrain.cell[index]) != terrain_[cell].terrain)
+                    ++count;
+            });
+        return count;
+    }
+
+    bool withinTerraformBudget(const std::vector<PlacedBuilding>& placed) const
+    {
+        if (limits_.terraform == Terraforming::None || limits_.terraform == Terraforming::Unlimited)
+            return true;
+        return terraformedTiles(placed) <= limits_.terraform;
     }
 
     Score scoreOf(const Output& output) const
@@ -376,6 +514,16 @@ private:
             return true;
         }
 
+        if (choice <= 4 && !terraformable_.empty()) {
+            PlacedBuilding& terraformed = placed[terraformable_[randomIndex(terraformable_.size())]];
+            const std::vector<TerrainAssignment>& table = assignments_[static_cast<std::size_t>(terraformed.building)];
+            const TerrainAssignment chosen = table[randomIndex(table.size())];
+            if (chosen == terraformed.terrain)
+                return false;
+            terraformed.terrain = chosen;
+            return true;
+        }
+
         const std::size_t p = randomIndex(placed.size());
         const std::size_t tile = buildable_tiles_[randomIndex(buildable_tiles_.size())];
         if (occupied[tile] == static_cast<int>(p))
@@ -414,6 +562,8 @@ private:
 
             if (!mapOccupancy(rules_, candidate, terrain_, fittedOccupancy))
                 continue;
+            if (!withinTerraformBudget(candidate))
+                continue;
 
             const Score value = score(candidate);
             const ScoreDifference difference = compare(value, current_score);
@@ -431,6 +581,33 @@ private:
             if (compare(current_score, best_score).sign > 0) {
                 best_score = current_score;
                 best = current;
+            }
+        }
+    }
+
+    /* A terraformed tile the score does not depend on is a terraform spent for
+       no change in the output. Every cell the best arrangement terraformed is
+       restored to the map's own terrain one at a time, and the restoration is
+       kept whenever the score does not fall. */
+    void revertTerraformsWithoutEffect(std::vector<PlacedBuilding>& best, Score& best_score)
+    {
+        if (limits_.terraform == Terraforming::None)
+            return;
+
+        std::vector<PlacedBuilding> candidate;
+        for (std::size_t p = 0; p < best.size(); ++p) {
+            for (std::size_t index = 0; index < MaxFootprint; ++index) {
+                if (best[p].terrain.cell[index] == Unchanged)
+                    continue;
+
+                candidate = best;
+                candidate[p].terrain.cell[index] = Unchanged;
+                const Score value = score(candidate);
+                if (compare(value, best_score).sign < 0)
+                    continue;
+
+                best = candidate;
+                best_score = value;
             }
         }
     }
@@ -458,6 +635,8 @@ private:
             Occupancy fittedOccupancy{};
             if (evaluated_this_restart_ >= limits_.budget || !mapOccupancy(rules_, placed, terrain_, fittedOccupancy))
                 return;
+            if (!withinTerraformBudget(placed))
+                return;
             const Score value = score(placed);
             if (compare(value, bestFoundScore).sign > 0) {
                 bestFoundScore = value;
@@ -481,6 +660,16 @@ private:
             for (std::size_t o = 0; o < count; ++o) {
                 candidate = best;
                 candidate[p].orientation = others[o];
+                evaluate(candidate);
+            }
+        }
+
+        for (const std::size_t p : terraformable_) {
+            for (const TerrainAssignment& assignment : assignments_[static_cast<std::size_t>(best[p].building)]) {
+                if (assignment == best[p].terrain)
+                    continue;
+                candidate = best;
+                candidate[p].terrain = assignment;
                 evaluate(candidate);
             }
         }
@@ -514,9 +703,11 @@ private:
 
     Village terrain_;
     Village working_;
-    std::vector<std::size_t> written_anchors_; // the anchors working_ currently holds
+    std::vector<std::size_t> written_cells_; // the tiles working_ currently holds an arrangement on
     std::vector<PlacedBuilding> initial_;
     std::vector<std::size_t> rotatable_;
+    std::vector<std::size_t> terraformable_; // placements whose building has a terrain bonus
+    std::array<std::vector<TerrainAssignment>, Enum::Count<Building>> assignments_;
     std::vector<std::size_t> buildable_tiles_;
     std::size_t sealed_count_ = 0;
 
@@ -552,6 +743,7 @@ SearchResult rearrange(const GameModifiers& modifiers, const Village& village, s
             .improvementPasses = 8,
             .budget = 100000,
             .seed = limits.seed,
+            .terraform = limits.terraform,
         };
 
         for (const Goal& goal : goals) {

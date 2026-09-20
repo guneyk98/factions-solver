@@ -114,6 +114,11 @@ efforts=(
     'restarts=-4'
     'restarts=x'
     'budget=3000000000'
+    'terraform=4'
+    'terraform=unlimited'
+    'terraform=0'
+    'terraform=-1'
+    'terraform=some'
 )
 
 for i in "${!efforts[@]}"; do
@@ -126,6 +131,11 @@ check "rearrange-full-wood" rearrange "$cases/full.txt" 'wood.production' "$smal
 check "rearrange-full-blended" rearrange "$cases/full.txt" 'wood.production:2,soldiers.production:1' "$small"
 check "rearrange-bare" rearrange "$cases/bare.txt" 'wood.production' "$small"
 check "rearrange-modifiers" rearrange "$cases/full-modifiers.txt" 'soldiers.production.attack' "$small"
+
+# Terraforming: a counted budget the search must stay inside, and one bounded
+# only by the arrangement.
+check "rearrange-terraform-3" rearrange "$cases/full.txt" 'wood.production' "$small,terraform=3"
+check "rearrange-terraform-unlimited" rearrange "$cases/full.txt" 'wood.production' "$small,terraform=unlimited"
 
 if (( record )); then
     printf 'recorded %d answers\n' "$recorded"

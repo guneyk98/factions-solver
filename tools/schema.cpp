@@ -9,6 +9,7 @@
 #include <string>
 #include <string_view>
 
+#include "effects.hpp"
 #include "game.hpp"
 #include "solver.hpp"
 #include "village.hpp"
@@ -69,6 +70,11 @@ void write(std::ostream& to)
        << "  // What the hq is worth on knight and on guardian power, before\n"
        << "  // any share or factor.\n"
        << "  basePower: " << quantity(BasePower) << ",\n"
+       << "  // Added to the buildings' storage before anything scales it.\n"
+       << "  baseStorage: { ";
+    for (const Resource resource : Enum::values<Resource>())
+        to << (resource == Resource{} ? "" : ", ") << Resources::toId(resource) << ": " << quantity(BaseStorage[static_cast<std::size_t>(resource)]);
+    to << " },\n"
        << "  masterSealBonus: " << quantity(MasterSealBonus) << ",\n"
        << "  sealBonus: " << quantity(SealBonus) << ",\n"
        << "  // What each season change multiplies every cost multiplier by.\n"
@@ -175,17 +181,23 @@ void write(std::ostream& to)
         }
         to << "    ], effects: [\n";
 
-        for (const Game::Building& b : g.buildings) {
-            for (const Game::Effect& e : b.effects) {
+        const auto writeEffects = [&to](std::string_view name, std::span<const Game::Effect> effects) {
+            for (const Game::Effect& e : effects) {
                 std::string on;
                 for (const std::string_view one : e.on)
                     on += (on.empty() ? "" : ", ") + quoted(one);
 
                 to << std::format("      {{ building: {}, where: {}, amount: {}, quantity: {}, rateOrCapacity: {},"
                                   " value: {}, perLevel: {}, byCategory: {}, on: [{}] }},\n",
-                                  quoted(b.name), quoted(Game::name(e.where)), quoted(Game::name(e.amount)), quoted(Game::name(e.quantity)), quoted(Game::name(e.rateOrCapacity)), quantity(e.value), e.perLevel ? "true" : "false", e.byCategory ? "true" : "false", on);
+                                  quoted(name), quoted(Game::name(e.where)), quoted(Game::name(e.amount)), quoted(Game::name(e.quantity)), quoted(Game::name(e.rateOrCapacity)), quantity(e.value), e.perLevel ? "true" : "false", e.byCategory ? "true" : "false", on);
             }
-        }
+        };
+
+        for (const Game::Building& b : g.buildings)
+            writeEffects(b.name, b.effects);
+
+        // The centre is in no game's building list; the engine synthesises its effects.
+        writeEffects(Buildings::toId(Building::VillageCentre), Rules::of(g.id).effects(Building::VillageCentre));
         to << "    ] },\n";
     }
     to << "  ],\n\n";

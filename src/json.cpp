@@ -85,6 +85,57 @@ void appendEfficiencies(std::string& out, bool (*wanted)(Efficiency), const auto
     }
 }
 
+/* Building contributions keyed by the same ids the modifiers use, in three
+   blocks because the three combine differently: shares and factors apply to
+   the base. The page holds the modifiers itself. */
+void appendFromBuildings(std::string& out, const FromBuildings& from)
+{
+    bool first = true;
+    const auto pair = [&](std::string_view id, double value) {
+        std::format_to(std::back_inserter(out), "{}\"{}\":{:.10g}", first ? "" : ",", id, value);
+        first = false;
+    };
+
+    const auto resourceId = [](Resource resource, RateOrCapacity rateOrCapacity) {
+        return std::format("{}.{}", Resources::toId(resource), RateOrCapacities::toId(rateOrCapacity));
+    };
+    const auto unitId = [](Unit unit) { return std::format("{}.{}", Units::toId(unit), Units::Field); };
+
+    out += "\"fromBuildings\":{\"base\":{";
+    for (const Resource resource : Enum::values<Resource>())
+        for (const RateOrCapacity rateOrCapacity : Enum::values<RateOrCapacity>())
+            pair(resourceId(resource, rateOrCapacity),
+                 (rateOrCapacity == RateOrCapacity::Rate ? from.production : from.storage)[resource]);
+    for (const Unit unit : Enum::values<Unit>())
+        pair(unitId(unit), from.units[static_cast<std::size_t>(unit)]);
+    pair("market.tax", from.market_tax);
+
+    out += "},\"shares\":{";
+    first = true;
+    for (const Resource resource : Enum::values<Resource>())
+        for (const RateOrCapacity rateOrCapacity : Enum::values<RateOrCapacity>())
+            pair(resourceId(resource, rateOrCapacity),
+                 from.shares[static_cast<std::size_t>(resource)][static_cast<std::size_t>(rateOrCapacity)]);
+    for (const Efficiency efficiency : Enum::values<Efficiency>())
+        pair(std::format("{}.{}", Efficiencies::Field, Efficiencies::toId(efficiency)), from.efficiency[static_cast<std::size_t>(efficiency)]);
+    for (const Power power : Enum::values<Power>())
+        pair(std::format("{}.{}", Powers::toId(power), Powers::Field), from.power[static_cast<std::size_t>(power)]);
+    for (const Unit unit : Enum::values<Unit>())
+        pair(unitId(unit), from.unit_shares[static_cast<std::size_t>(unit)]);
+    // subtracted from the tax, not a share of it
+    pair("market.tax", -from.tax_reduction);
+
+    out += "},\"factors\":{";
+    first = true;
+    for (const Resource resource : Enum::values<Resource>())
+        for (const RateOrCapacity rateOrCapacity : Enum::values<RateOrCapacity>())
+            pair(resourceId(resource, rateOrCapacity),
+                 1 + from.multipliers[static_cast<std::size_t>(resource)][static_cast<std::size_t>(rateOrCapacity)]);
+    for (const Unit unit : Enum::values<Unit>())
+        pair(unitId(unit), 1 + from.unit_multipliers[static_cast<std::size_t>(unit)]);
+    out += "}}";
+}
+
 void appendGrids(std::string& out, std::string_view name, const ResourceGrids& grids)
 {
     std::format_to(std::back_inserter(out), "\"{}\":{{", name);
@@ -148,6 +199,9 @@ std::string of(const Output& output, const ProductionDetail& detail, const AuraD
     appendTotals(out, "storage", detail.global.storage);
     out += "},";
 
+    appendFromBuildings(out, detail.from_buildings);
+    out += ',';
+
     out += "\"tiles\":{";
     appendGrids(out, "production", detail.production);
     out += ',';
@@ -180,6 +234,14 @@ void appendTileStrings(std::string& out, std::string_view name, const Village& v
     out += ']';
 }
 
+void appendTerraformed(std::string& out, const Village& village)
+{
+    out += "\"terraformed\":[";
+    for (std::size_t i = 0; i < TileCount; ++i)
+        std::format_to(std::back_inserter(out), "{}{}", i == 0 ? "" : ",", village.terraformed(i) ? "true" : "false");
+    out += ']';
+}
+
 void appendTileLevels(std::string& out, const Village& village)
 {
     out += "\"levels\":[";
@@ -205,8 +267,10 @@ void appendLayout(std::string& out, const Village& village)
 
 std::string of(const Village& village)
 {
-    std::string out = std::format("{{\"level\":{},", village.level);
+    std::string out = std::format("{{\"level\":{},\"terrainBonusFactor\":{:.10g},", village.level, village.terrainBonusFactor);
     appendTileStrings(out, "terrain", village, [](const Tile& tile) { return Terrains::toId(tile.terrain); });
+    out += ',';
+    appendTerraformed(out, village);
     out += ',';
     appendLayout(out, village);
     return out + '}';
@@ -224,8 +288,15 @@ std::string of(const SearchResult& found, std::span<const Goal> goals, Ranking r
     }
     std::format_to(std::back_inserter(out), "],\"ranking\":\"{}\",", ranking == Ranking::WeightedSum ? "weighted-sum" : "lexicographic");
 
-    std::format_to(std::back_inserter(out), "\"evaluated\":{},\"moved\":{},\"layout\":{{", found.evaluated, found.moved);
+    std::format_to(std::back_inserter(out), "\"evaluated\":{},\"moved\":{},\"terraformed\":{},\"layout\":{{", found.evaluated, found.moved, found.terraformed);
 
+    /* The terrain goes out with the layout, since a search allowed to
+       terraform returns terrain the page does not already hold. */
+    appendTileStrings(out, "terrain", found.village, [](const Tile& tile) { return Terrains::toId(tile.terrain); });
+    out += ',';
+    // which of them it terraformed, which terrainBonusFactor acts on
+    appendTerraformed(out, found.village);
+    out += ',';
     appendLayout(out, found.village);
     out += "}}";
 

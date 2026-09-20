@@ -223,17 +223,22 @@ const RATE_OR_CAPACITIES = joined(SCHEMA.rateOrCapacities, {
   storage: { suffix: ' cap', full: 'storage' },
 }, 'rate or capacity');
 
+// the engine's two names, which the ids below are built from
+const [RATE, CAPACITY] = SCHEMA.rateOrCapacities;
+
 const RESOURCE_OBJECTIVES = RATE_OR_CAPACITIES.flatMap((m) => RESOURCES.map((r) => ({
   id: `${r.key}.${m.key}`, name: `${r.name}${m.suffix}`, full: `${r.name} ${m.full}`,
 })));
 
 // The five world ratings, each a share rather than a resource.
+/* `quests`: the api lists the quest multiplier against attack, defence and
+   worker but not map or projects, and the engine follows it. */
 const EFFICIENCIES = joined(SCHEMA.efficiencies, {
-  attack: { name: 'Attack', short: 'atk', soldiers: true, workers: false },
-  defense: { name: 'Defence', short: 'def', soldiers: true, workers: false },
-  worker: { name: 'Worker', short: 'wrk', soldiers: false, workers: true },
-  map: { name: 'Map', short: 'map', soldiers: false, workers: true },
-  projects: { name: 'Projects', short: 'prj', soldiers: false, workers: true },
+  attack: { name: 'Attack', short: 'atk', soldiers: true, workers: false, quests: true },
+  defense: { name: 'Defence', short: 'def', soldiers: true, workers: false, quests: true },
+  worker: { name: 'Worker', short: 'wrk', soldiers: false, workers: true, quests: true },
+  map: { name: 'Map', short: 'map', soldiers: false, workers: true, quests: false },
+  projects: { name: 'Projects', short: 'prj', soldiers: false, workers: true, quests: false },
 }, 'efficiency');
 
 /* The military powers, each an absolute figure that starts from the base the
@@ -246,6 +251,10 @@ const POWERS = joined(SCHEMA.powers, {
 }, 'power');
 
 const BASE_POWER = SCHEMA.basePower;
+const BASE_STORAGE = SCHEMA.baseStorage;
+
+// the perk's name in game; terrainBonusFactor in the api
+const FERTILE_GROUNDS = 'Fertile grounds';
 
 // The two the api lists under production beside the resources.
 const UNITS = joined(SCHEMA.units, {
@@ -396,6 +405,9 @@ const GAME_MODIFIERS = SCHEMA.modifiers.map(({ id, neutral, minimum, addedBefore
 
 const MODIFIER_BY_ID = new Map(GAME_MODIFIERS.map((m) => [m.id, m]));
 
+// decimals serialize() writes a modifier to, which is what the engine gets
+const MODIFIER_DECIMALS = 4;
+
 // The three modifiers that belong to no resource or efficiency.
 const STANDALONE_MODIFIERS = joined(GAME_MODIFIERS.filter((m) => !m.id.includes('.')), {
   quests: { name: 'Quests' },
@@ -413,8 +425,9 @@ const MARKET_MODIFIERS = STANDALONE_MODIFIERS.filter((m) => m.percent);
 
 // Crossed with every resource and rate-or-capacity to build the table.
 const MODIFIER_SOURCES = joined(SCHEMA.modifierSources, {
-  terrain: { name: 'Terrain' },
-  terrain_flat: { name: 'Terrain' },
+  // named apart from a tile's terrain: these come from the world map
+  terrain: { name: 'Terrain (world)' },
+  terrain_flat: { name: 'Terrain (world)' },
   improvements: { name: 'Improvements' },
   shrine: { name: 'Shrine' },
   event_projects: { name: 'Event projects' },
@@ -891,7 +904,8 @@ function buildingsBeside(board, anchor, cells) {
    it. Both pages show the same thing, so it is written once here.
 
    `board` is what the page has on the board and what the engine last said
-   about it: { tiles, result }. Nothing else is read from the page. */
+   about it: { tiles, result, terrainBonusFactor }. Nothing else is read from
+   the page. */
 
 // The resources a level is paid in, in the order the game lists them.
 // Soldiers are not spent, so they are excluded.
@@ -1068,7 +1082,7 @@ function goesToWholeVillage(effect, effects) {
     && !ownFigureFor(effect, effects);
 }
 
-function effectRow(effect, level, seal, from = '', times = 1, dim = false, effects = []) {
+function effectRow(effect, level, seal, from = '', times = 1, dim = false, effects = [], explains = '') {
   const notes = (COUNTED.has(effect.quantity) ? '' : '<span class="fx-note">not counted</span>')
     + (effect.perLevel ? '<span class="fx-note" title="Scales with the building\'s level">&uarr;lvl</span>' : '')
     + (goesToWholeVillage(effect, effects)
@@ -1079,7 +1093,8 @@ function effectRow(effect, level, seal, from = '', times = 1, dim = false, effec
   const kind = effect.amount === 'multiply' ? 'fx-times' : 'fx-plus';
 
   return `<li${dim ? ' class="fx-dim"' : ''}><span class="fx-what">${effectLabel(effect)}</span>`
-    + `<span class="fx-value ${kind}">${effectAmount(effect, level, seal, times, effects)}</span>${notes}`
+    + `<span class="fx-value ${kind}${explains === '' ? '' : ' fx-explained'}" ${explains}>`
+    + `${effectAmount(effect, level, seal, times, effects)}</span>${notes}`
     + (from === '' ? '' : `<span class="fx-from">${from}</span>`)
     + '</li>';
 }
@@ -1088,6 +1103,19 @@ function effectBlock(title, kind, live, rows) {
   if (rows.length === 0) return '';
   return `<h4 class="fx-head fx-${kind}${live ? '' : ' fx-dim'}">${title}</h4>`
     + `<ul class="fx-list fx-${kind}${live ? '' : ' fx-dim'}">${rows.join('')}</ul>`;
+}
+
+/* What the engine scales a terrain effect by over the tiles a building
+   covers: one per matching tile, terrainBonusFactor where terraformed. */
+function terrainScale(board, cells, ground) {
+  const factor = board.terrainBonusFactor ?? 1;
+  let scale = 0;
+
+  for (const cell of cells) {
+    if (board.tiles[cell].terrain !== ground) continue;
+    scale += board.tiles[cell].terraformed === true ? factor : 1;
+  }
+  return scale;
 }
 
 // The auras reaching a tile, as rows for the adjacency block: the factor and
@@ -1116,10 +1144,48 @@ function aurasOn(board, anchor, cells) {
     });
 }
 
+/* The auras over every quantity reaching a tile, each as the factor it came
+   to. These multiply whatever a building on the tile contributes, the aura it
+   provides its own neighbours included. Written in a first pass, so none of
+   them multiplies another. */
+function aurasOverEverything(board, cells) {
+  if (!board.result) return [];
+
+  return board.result.modifiers
+    .filter((aura) => aura.rateOrCapacity === 'both')
+    .map((aura) => ({ from: aura.from, value: 1 + cells.reduce((sum, cell) => sum + aura.values[cell], 0) }))
+    .filter((aura) => aura.value !== 1);
+}
+
+// What multiplies one aura a building provides; an over-everything aura, nothing.
+function auraBoostOn(effect, overEverything) {
+  return effect.rateOrCapacity === 'both' ? 1 : overEverything;
+}
+
+/* The auras reaching a tile that multiply one quantity, as
+   Rules::aurasThatMultiply picks them: over efficiency multiplies every
+   quantity, one named for a quantity that one alone, one over both a rate and
+   a capacity alike. A building covering several tiles is reached once. */
+function aurasMultiplying(board, cells, quantity, rateOrCapacity) {
+  if (!board.result) return [];
+
+  return board.result.modifiers
+    .filter((aura) => aura.quantity === SCHEMA.efficiencyField || aura.quantity === quantity)
+    .filter((aura) => aura.rateOrCapacity === 'both' || aura.rateOrCapacity === rateOrCapacity)
+    .map((aura) => ({ from: aura.from, value: 1 + cells.reduce((sum, cell) => sum + aura.values[cell], 0) }))
+    .filter((aura) => aura.value !== 1);
+}
+
 /* What one building accumulates, from the same rules the rows above are drawn
    from. Shares and factors are summed and multiplied separately, since shares
    add into the sum and factors multiply it. Flat shares are excluded, being
    village-wide rather than this building's.
+
+   Where the building has no base of its own, what it contributes goes to the
+   village and the auras reaching this tile multiply it, exactly as they
+   multiply the output of a building that has one. Where it has a base, that
+   base is what they multiply, and the tile's own figure already carries them,
+   so counting them here as well would count them twice.
 
    Attack, defense and the tax also pass through here: the engine counts them
    into no resource, so it reports no per-tile value for them. */
@@ -1130,46 +1196,80 @@ function effectTotals(board, anchor, level) {
   const beside = buildingsBeside(board, anchor, cells);
 
   const totals = new Map();
-  const reach = (effect) => {
-    if (effect.where === 'base') return 1;
-    if (effect.where === 'terrain') {
-      return cells.filter((cell) => effect.on.includes(board.tiles[cell].terrain)).length;
-    }
-    if (effect.where === 'adjacent') return beside.filter((b) => effect.on.includes(b)).length;
-    return 0; // an aura applies to the neighbours, not to this tile
-  };
-
   for (const effect of effects) {
-    const times = reach(effect);
+    const times = effectReach(board, cells, beside, effect);
     if (times === 0 || goesToWholeVillage(effect, effects)) continue;
 
     const key = `${effect.quantity}|${effect.rateOrCapacity}`;
-    const running = totals.get(key)
-      ?? { quantity: effect.quantity, rateOrCapacity: effect.rateOrCapacity, share: 0, factor: 1 };
+    const running = totals.get(key) ?? {
+      quantity: effect.quantity,
+      rateOrCapacity: effect.rateOrCapacity,
+      // a per-level share is multiplied by the auras; a flat one is village-wide outright
+      perLevelShare: 0,
+      flatShare: 0,
+      factor: 1,
+      counted: 0,
+      from: [],
+      toVillage: !hasBaseOfItsOwn(effect, effects),
+    };
 
     const scaled = effectTimes(effect, level, tile.seal, times, effects);
-    if (effect.amount === 'share') running.share += effect.value * scaled;
-    else if (effect.amount === 'multiply') running.factor *= 1 + (effect.value - 1) * scaled;
+    if (effect.amount === 'share') {
+      if (effect.perLevel) running.perLevelShare += effect.value * scaled;
+      else running.flatShare += effect.value * scaled;
+    } else if (effect.amount === 'multiply') {
+      running.factor *= 1 + (effect.value - 1) * scaled;
+    }
+    running.counted += 1;
+    running.from.push({ effect, times, ground: effectGround(board, cells, effect) });
 
     totals.set(key, running);
   }
 
-  // Rows carrying a share come first, as the game orders them.
-  return [...totals.values()]
+  const finished = [...totals.values()].map((one) => {
+    const auras = one.toVillage ? aurasMultiplying(board, cells, one.quantity, one.rateOrCapacity) : [];
+    const reaching = auras.reduce((product, aura) => product * aura.value, 1);
+
+    return {
+      ...one,
+      auras,
+      // What the building came to before any aura reached it, kept so the
+      // panel can show the two apart.
+      ownFactor: one.factor,
+      share: one.perLevelShare * reaching + one.flatShare,
+      // A factor is stored as the factor and contributed as what it adds, so
+      // the auras multiply the amount above one rather than the factor.
+      factor: 1 + (one.factor - 1) * reaching,
+    };
+  });
+
+  /* A building with a figure of its own has it reported per tile, with these
+     shares and factors already counted into it, so repeating them here would
+     state them twice. What goes to the village has no such figure, and nor do
+     the quantities the engine counts into no resource: a rating or the tax is
+     reported for the village alone, so its row is the only place it shows.
+
+     Rows carrying a share come first, as the game orders them. */
+  return finished
     .filter((one) => one.share !== 0 || one.factor !== 1)
+    .filter((one) => one.toVillage || !GLOBAL_RESOURCES.includes(one.quantity))
     .sort((a, b) => (b.share !== 0) - (a.share !== 0));
 }
 
 /* Shares and factors get a column each, so the values align down the block
-   instead of following the label. A block with no factors needs one column. */
-function totalRow(one, withFactors) {
+   instead of following the label. A block with no factors needs one column.
+
+   Each figure carries what it would take to explain it, so that clicking it
+   opens the same panel the stats panel uses. */
+function totalRow(one, withFactors, anchor) {
   const share = one.share === 0 ? ''
     : `${one.share > 0 ? '+' : ''}${fmt(one.share * 100, 1)}%`;
+  const explains = `data-tile-total="${anchor}|${one.quantity}|${one.rateOrCapacity}"`;
 
   return `<li><span class="fx-what">${effectLabel(one)}</span>`
-    + `<span class="fx-value fx-plus">${share}</span>`
+    + `<span class="fx-value fx-plus${share === '' ? '' : ' fx-explained'}" ${share === '' ? '' : explains}>${share}</span>`
     + (withFactors
-      ? `<span class="fx-value fx-times">${one.factor === 1 ? '' : `×${fmt(one.factor, 2)}`}</span>`
+      ? `<span class="fx-value fx-times${one.factor === 1 ? '' : ' fx-explained'}" ${one.factor === 1 ? '' : explains}>${one.factor === 1 ? '' : `×${fmt(one.factor, 2)}`}</span>`
       : '')
     + '</li>';
 }
@@ -1187,16 +1287,29 @@ function buildingEffects(board, anchor, level, auraRows = []) {
     effects.filter((e) => e.where === 'base')
       .map((e) => effectRow(e, level, tile.seal, '', 1, false, effects)));
 
-  // One block per terrain this building responds to, applying or not.
+  /* One block per terrain this building responds to, applying or not. A
+     terrain it does not stand on is shown at what one matching tile would be
+     worth: the block is already greyed, so the figure says what moving the
+     building would gain. The adjacency rows below read the same way. */
   const grounds = [...new Set(effects.filter((e) => e.where === 'terrain').flatMap((e) => e.on))];
   for (const ground of grounds) {
     const matching = cells.filter((cell) => board.tiles[cell].terrain === ground).length;
+    const scale = terrainScale(board, cells, ground);
     const rows = effects
       .filter((e) => e.where === 'terrain' && e.on.includes(ground))
-      .map((e) => effectRow(e, level, tile.seal, '', matching, false, effects));
+      .map((e) => effectRow(e, level, tile.seal, '', Math.max(scale, 1), false, effects));
     const named = TERRAIN_BY_KEY.get(ground)?.name ?? ground;
     const live = standing.has(ground);
-    html += effectBlock(`${live ? named : `✗ ${named}`} ${matching}/${cells.length}`, 'terrain', live, rows);
+    /* Covered tiles of this terrain, which says something only over several
+       tiles with some matching: on one tile it repeats the name, and where
+       none match the cross has said so. */
+    const counted = cells.length > 1 && matching > 0 ? ` ${matching}/${cells.length}` : '';
+    // the rows above already carry it; this names it
+    const fertile = scale > matching
+      ? `<li class="fx-fertile">+ ${FERTILE_GROUNDS} +${fmt((board.terrainBonusFactor - 1) * 100, 2)}%</li>`
+      : '';
+    html += effectBlock(`${live ? named : `✗ ${named}`}${counted}`, 'terrain', live,
+      rows.length === 0 ? rows : [...rows, fertile]);
   }
 
   /* One row per building an adjacency effect names, worth its value times the
@@ -1225,14 +1338,20 @@ function buildingEffects(board, anchor, level, auraRows = []) {
       adjacent.some((a) => a.live) || auraRows.length > 0, adjacencyRows);
   }
 
-  const gives = effects.filter((e) => e.where === 'provides').map((e) => {
-    const named = e.on.length === 0
+  /* What this building gives its neighbours, at what the engine wrote to
+     their tiles: an aura not covering every quantity is multiplied by the
+     ones that do. */
+  const overEverything = aurasOverEverything(board, cells).reduce((product, aura) => product * aura.value, 1);
+  const gives = effects.filter((e) => e.where === 'provides').map((e, n) => {
+    const reaches = e.on.length === 0
       ? 'every neighbour'
-      : e.on.map((want) => (e.byCategory
+      : `adjacent ${e.on.map((want) => (e.byCategory
         ? `${want.toLowerCase()} buildings`
-        : (BUILDING_BY_KEY.get(want)?.name ?? want).toLowerCase())).join(', ');
-    return effectRow(e, level, tile.seal, '', 1, false, effects)
-      .replace('</li>', `<span class="fx-reaches">to adjacent ${named}</span></li>`);
+        : (BUILDING_BY_KEY.get(want)?.name ?? want).toLowerCase())).join(', ')}`;
+
+    return effectRow(e, level, tile.seal, '', auraBoostOn(e, overEverything), false, effects,
+      `data-tile-aura="${anchor}|${n}"`)
+      .replace('</li>', `<span class="fx-reaches">to ${reaches}</span></li>`);
   });
   html += effectBlock('Aura', 'gives', true, gives);
 
@@ -1268,6 +1387,7 @@ function costBlock(board, anchor) {
    what the tile comes to, and what it cost. `anchor` is the tile the building
    is stored on, which is `i` itself for bare ground and for a single tile. */
 function tileDetail(board, i, anchor) {
+  lastBoard = board;
   const owner = anchor === null ? null : board.tiles[anchor];
 
   let html = '';
@@ -1283,17 +1403,18 @@ function tileDetail(board, i, anchor) {
     const { tiles } = board.result;
     const src = anchor === null ? i : anchor;
 
-    const line = (name, value, cls) => `<li><span class="fx-what">${name}</span>`
-      + `<span class="fx-value ${cls}">${value}</span></li>`;
+    // Each figure carries its breakdown id and tile, so a click narrows to this tile.
+    const line = (name, value, cls, id) => `<li><span class="fx-what">${name}</span>`
+      + `<span class="fx-value ${cls} fx-explained" data-breakdown="${id}" data-tile="${src}">${value}</span></li>`;
 
     for (const r of RESOURCES) {
       if (tiles.production[r.key][src] > 0) {
-        totals.push(line(`${r.name} production`, `+${fmt(tiles.production[r.key][src], 3)}`, r.cls));
+        totals.push(line(`${r.name} production`, `+${fmt(tiles.production[r.key][src], 3)}`, r.cls, `${r.key}.production`));
       }
     }
     for (const r of RESOURCES) {
       if (tiles.storage[r.key][src] > 0) {
-        totals.push(line(`${r.name} storage`, `+${fmtStore(tiles.storage[r.key][src])}`, r.cls));
+        totals.push(line(`${r.name} storage`, `+${fmtStore(tiles.storage[r.key][src])}`, r.cls, `${r.key}.storage`));
       }
     }
   }
@@ -1301,7 +1422,7 @@ function tileDetail(board, i, anchor) {
   if (owner !== null) {
     const gathered = effectTotals(board, anchor, owner.level);
     const withFactors = gathered.some((one) => one.factor !== 1);
-    totals.push(...gathered.map((one) => totalRow(one, withFactors)));
+    totals.push(...gathered.map((one) => totalRow(one, withFactors, anchor)));
   }
 
   html += effectBlock('Total', 'out', true, totals);
@@ -1431,8 +1552,711 @@ function renderCosts(result) {
 /* The stats panel, filled from one engine reply. Both pages show the same
    figures, so both fill it here; `result` is what the engine last returned, or
    null before it has answered. */
-function renderStatsPanel(result) {
+function renderStatsPanel(result, modifiers = lastModifiers) {
+  lastResult = result;
+  lastModifiers = modifiers;
   renderTotals(result);
   renderStats(result);
   renderCosts(result);
+  markBreakdownTargets();
+  reopenBreakdown();
 }
+
+/* --------------------------- how a figure was reached ---------------------
+
+   Clicking a figure in the stats or tile panel opens the terms it was
+   computed from. The markup is built here rather than in either page: neither
+   knows which figures the engine reports. */
+
+/* The reply and the modifiers it was computed with, for a later click. */
+let lastResult = null;
+let lastModifiers = {};
+let lastBoard = null;
+// what is open, so a fresh reply redraws it in place
+let openBreakdown = null;
+
+// stats panel element id -> breakdown id; both are built from the same enums
+function breakdownIdOf(elementId) {
+  const [head, ...rest] = elementId.split('-');
+  const tail = rest.join('.');
+
+  if (head === 'total') return `${tail}.${RATE}`;
+  if (head === 'store') return `${tail}.${CAPACITY}`;
+  if (head === 'efficiency') return `${SCHEMA.efficiencyField}.${tail}`;
+  if (head === 'power') return `${tail}.${SCHEMA.powerField}`;
+  if (head === 'units') return `${tail}.${SCHEMA.unitField}`;
+  if (head === 'market') return `market.${tail}`;
+  if (head === 'effective') return `effective.${tail}`;
+  return null;
+}
+
+// Marks the explainable figures clickable; a cost has no breakdown.
+function markBreakdownTargets() {
+  for (const el of document.querySelectorAll('.stats .fx-value')) {
+    if (el.id === '') continue;
+    const id = breakdownIdOf(el.id);
+    const explained = id !== null && lastResult !== null && buildBreakdown(id) !== null;
+
+    if (explained) el.dataset.breakdown = id;
+    else delete el.dataset.breakdown;
+    el.classList.toggle('fx-explained', explained);
+  }
+}
+
+const BREAKDOWN_KINDS = {
+  base: { name: 'base', sign: '' },
+  added_before: { name: 'added before', sign: '+' },
+  share: { name: 'shares', sign: '+' },
+  factor: { name: 'factors', sign: '×' },
+  added_after: { name: 'added after', sign: '+' },
+};
+
+const BREAKDOWN_ORDER = ['base', 'added_before', 'share', 'factor', 'added_after'];
+
+// neutral: a factor of one, anything else zero
+function isNeutralTerm(term) {
+  return term.value === (term.kind === 'factor' ? 1 : 0);
+}
+
+/* A modifier as the engine was given it: percent entries divided back down,
+   then rounded as serialize() writes them. The page's own unrounded value
+   would leave the breakdown off by that rounding. */
+function modifierWorth(id) {
+  const field = MODIFIER_BY_ID.get(id);
+  if (field === undefined) return null;
+
+  const entered = modifierIn(lastModifiers, id);
+  const value = Number.isFinite(entered) ? entered : field.neutral;
+  return Number((field.percent ? value / 100 : value).toFixed(MODIFIER_DECIMALS));
+}
+
+function kindOfSource(source) {
+  if (source.addedBefore) return 'added_before';
+  if (source.addedAfter) return 'added_after';
+  return source.share ? 'share' : 'factor';
+}
+
+/* One term per modifier source. The resource-only sources are left out of
+   the other quantities, where the engine holds them at their neutral. */
+function modifierTerms(quantityId, resourceQuantity, prefix = '') {
+  const sources = resourceQuantity ? MODIFIER_SOURCES : COMBAT_SOURCES;
+
+  return sources.map((source) => ({
+    label: `${prefix}${source.name.toLowerCase()}`,
+    value: modifierWorth(`${quantityId}.${source.key}`) ?? (kindOfSource(source) === 'factor' ? 1 : 0),
+    kind: kindOfSource(source),
+  }));
+}
+
+const QUESTS_ID = 'quests';
+const BALANCE_ID = 'balance';
+const MARKET_TAX_REDUCTION_ID = 'market_tax_reduction';
+
+function questsTerm() {
+  return { label: 'quests', value: modifierWorth(QUESTS_ID), kind: 'factor' };
+}
+
+// Politics favours one production; the page holds which as the choice's name.
+function politicsTerm(resourceKey) {
+  const favoured = lastModifiers[SCHEMA.politicsField];
+  const worker = resourceKey === 'workers';
+  const soldier = resourceKey === 'soldiers';
+  const wanted = worker ? 'worker' : (soldier ? 'soldier' : 'resource');
+
+  return { label: 'politics', value: favoured === wanted ? SCHEMA.politicsBonus : 1, kind: 'factor' };
+}
+
+/* One figure as its terms, null for an id the page cannot explain. Building
+   contributions come from the engine, the modifiers are the page's own; put
+   together here, not in the engine, where it would weigh on every search. */
+function buildBreakdown(id) {
+  const from = lastResult?.fromBuildings;
+  if (from === undefined) return null;
+
+  const base = (of) => ({ label: 'buildings', value: from.base[of] ?? 0, kind: 'base' });
+  const buildingShare = (of) => ({ label: 'buildings', value: from.shares[of] ?? 0, kind: 'share' });
+  const buildingFactor = (of) => ({ label: 'buildings', value: from.factors[of] ?? 1, kind: 'factor' });
+
+  const parts = id.split('.');
+
+  // a resource, per tick or as a capacity
+  if (RESOURCES.some((r) => r.key === parts[0]) && (parts[1] === RATE || parts[1] === CAPACITY) && parts.length === 2) {
+    const perTick = parts[1] === RATE;
+    const terms = [base(id)];
+    if (!perTick) terms.push({ label: 'village base', value: BASE_STORAGE[parts[0]], kind: 'added_before' });
+    terms.push(buildingShare(id), buildingFactor(id), ...modifierTerms(id, true), questsTerm());
+    if (perTick) {
+      terms.push({ label: 'balance', value: modifierWorth(BALANCE_ID), kind: 'factor' });
+      terms.push(politicsTerm(parts[0]));
+    }
+    return { total: lastResult[perTick ? 'production' : 'storage'][parts[0]], terms };
+  }
+
+  // an efficiency, reported as the bonus over the 1 it starts from
+  if (parts[0] === SCHEMA.efficiencyField && parts.length === 2) {
+    const efficiency = EFFICIENCIES.find((e) => e.key === parts[1]);
+    if (efficiency === undefined) return null;
+
+    const terms = [{ label: 'base', value: 1, kind: 'base' }, buildingShare(id), ...modifierTerms(id, false)];
+    if (efficiency.quests) terms.push(questsTerm());
+    terms.push({ label: 'to bonus', value: -1, kind: 'added_after' });
+    return { total: lastResult.efficiency[parts[1]], terms };
+  }
+
+  /* A power, from the hq's base. Support power feeds knight and guardian
+     power alike, so its terms appear in both, named apart. */
+  if (parts[1] === SCHEMA.powerField && parts.length === 2) {
+    const support = `support.${SCHEMA.powerField}`;
+    const terms = [
+      { label: 'base', value: BASE_POWER, kind: 'base' },
+      buildingShare(id),
+      ...modifierTerms(id, false),
+    ];
+    if (parts[0] !== 'support') {
+      terms.push({ label: 'support buildings', value: from.shares[support] ?? 0, kind: 'share' });
+      terms.push(...modifierTerms(support, false, 'support '));
+    }
+    terms.push(questsTerm());
+    return { total: lastResult.power[parts[0]], terms };
+  }
+
+  // a unit's production; same id shape as a resource, so tested after them
+  if (UNITS.some((u) => u.key === parts[0]) && parts[1] === SCHEMA.unitField && parts.length === 2) {
+    return {
+      total: lastResult.units[parts[0]],
+      terms: [base(id), buildingShare(id), buildingFactor(id), ...modifierTerms(id, false), questsTerm()],
+    };
+  }
+
+  // No modifier scales the tax: reductions are subtracted, clamped at zero.
+  if (id === 'market.tax') {
+    const unclamped = from.base['market.tax'] + (from.shares['market.tax'] ?? 0) - modifierWorth(MARKET_TAX_REDUCTION_ID);
+    return {
+      total: lastResult.market.tax,
+      terms: [
+        { label: 'base', value: from.base['market.tax'], kind: 'base' },
+        { label: 'perk', value: -modifierWorth(MARKET_TAX_REDUCTION_ID), kind: 'added_before' },
+        { label: 'buildings', value: from.shares['market.tax'] ?? 0, kind: 'added_before' },
+        { label: 'clamp to 0', value: lastResult.market.tax - unclamped, kind: 'added_after' },
+      ],
+    };
+  }
+
+  // production left after the market's cut
+  if (parts[0] === 'market' && (parts[1] === 'wood' || parts[1] === 'iron')) {
+    return {
+      total: lastResult.market[parts[1]],
+      terms: [
+        { label: `${parts[1]}/t`, value: lastResult.production[parts[1]], kind: 'base', from: `${parts[1]}.${RATE}` },
+        { label: '1 - tax', value: 1 - lastResult.market.tax, kind: 'factor', from: 'market.tax' },
+      ],
+    };
+  }
+
+  // production scaled by its efficiencies; worker efficiency feeds all three
+  if (parts[0] === 'effective' && parts.length === 3) {
+    const [, which, key] = parts;
+    const efficiencyId = (of) => `${SCHEMA.efficiencyField}.${of}`;
+    const resource = which === 'soldiers' ? 'soldiers' : 'workers';
+
+    const terms = [{
+      label: `${resource}/t`, value: lastResult.production[resource], kind: 'base', from: `${resource}.${RATE}`,
+    }];
+    const scaledBy = (of) => ({
+      label: `${of} efficiency`, value: 1 + lastResult.efficiency[of], kind: 'factor', from: efficiencyId(of),
+    });
+
+    if (which === 'workers') {
+      terms.push(scaledBy('worker'));
+      if (key !== 'worker') terms.push(scaledBy(key));
+    } else {
+      terms.push(scaledBy(key));
+    }
+    return { total: lastResult.effective[which][key], terms };
+  }
+
+  return null;
+}
+
+// The terms folded in the engine's order, as the value after each stage.
+function breakdownStages(terms) {
+  const sum = (kind) => terms.filter((t) => t.kind === kind).reduce((total, t) => total + t.value, 0);
+  const product = (kind) => terms.filter((t) => t.kind === kind).reduce((total, t) => total * t.value, 1);
+
+  const base = sum('base') + sum('added_before');
+
+  return {
+    base,
+    shares: 1 + sum('share'),
+    factors: product('factor'),
+    after: sum('added_after'),
+  };
+}
+
+/* How many times an effect's condition is met: once for a base effect, once
+   per covered tile of its terrain, once per adjacent building it names (a
+   neighbour touching at several tiles counted once). */
+function effectReach(board, cells, beside, effect) {
+  if (effect.where === 'base') return 1;
+  if (effect.where === 'terrain') {
+    return effect.on.reduce((scale, ground) => scale + terrainScale(board, cells, ground), 0);
+  }
+  if (effect.where === 'adjacent') return beside.filter((b) => effect.on.includes(b)).length;
+  return 0; // an aura applies to the neighbours, not to this tile
+}
+
+// The perk's part of a terrain effect's reach, apart from the tiles matched.
+function effectGround(board, cells, effect) {
+  if (effect.where !== 'terrain') return 1;
+
+  const matching = cells.filter((cell) => effect.on.includes(board.tiles[cell].terrain)).length;
+  if (matching === 0) return 1;
+  return effectReach(board, cells, [], effect) / matching;
+}
+
+// what resolveRateOrCapacity does: a quantity naming neither is a rate
+function rateOrCapacityOf(effect) {
+  return effect.rateOrCapacity === CAPACITY ? CAPACITY : RATE;
+}
+
+// The panel's name for an effect's condition, with how often it was met.
+function effectSource(effect, times) {
+  if (effect.where === 'base') return 'base';
+
+  const named = effect.where === 'terrain'
+    ? effect.on.map((one) => (TERRAIN_BY_KEY.get(one)?.name ?? one).toLowerCase()).join('/')
+    : effect.on.map((one) => (BUILDING_BY_KEY.get(one)?.name ?? one).toLowerCase()).join('/');
+
+  return times > 1 ? `${named} ×${times}` : named;
+}
+
+// Terms rewritten so a list of them reads back as one figure.
+function asSum(terms) {
+  return terms.map((term) => ({ ...term, kind: 'base' }));
+}
+
+function asProduct(terms) {
+  if (terms.length === 0) return [{ label: 'base', value: 1, kind: 'base' }];
+  return [{ ...terms[0], kind: 'base' }, ...terms.slice(1).map((term) => ({ ...term, kind: 'factor' }))];
+}
+
+/* What scales one effect on one tile: level, the master builder's seal over
+   that level, times met, and the mill or barrel seal unless shown apart. A
+   terrain effect's times met carries `ground`, split back out as its own. */
+function effectScaling(effect, owner, times, effects, sealShownApart, ground = 1) {
+  const parts = [];
+  if (effect.perLevel) {
+    parts.push({ label: 'level', value: owner.level, kind: 'factor' });
+    if (owner.seal === 'LEVEL_BOOST') {
+      parts.push({ label: SEAL_BY_KEY.get('LEVEL_BOOST')?.name ?? 'LEVEL_BOOST', value: MASTER_LEVEL_BONUS, kind: 'factor' });
+    }
+  }
+  if (times / ground !== 1) parts.push({ label: 'times met', value: times / ground, kind: 'factor' });
+  if (ground !== 1) parts.push({ label: FERTILE_GROUNDS.toLowerCase(), value: ground, kind: 'factor' });
+  if (!sealShownApart && sealScales(effect, owner.seal, effects)) {
+    parts.push({ label: SEAL_BY_KEY.get(owner.seal)?.name ?? owner.seal, value: SEAL_BONUS, kind: 'factor' });
+  }
+  return parts;
+}
+
+/* One effect as a term, with what scales it in `parts`. A factor is scaled
+   as what it adds above one, so its parts take the one off and put it back.
+
+   sealShownApart: the caller shows the mill or barrel seal over the whole
+   figure, as a building with an output of its own does. */
+function effectTerm(effect, owner, times, label, effects = [], sealShownApart = false, ground = 1) {
+  const scale = sealShownApart
+    ? times * (effect.perLevel ? owner.level * (owner.seal === 'LEVEL_BOOST' ? MASTER_LEVEL_BONUS : 1) : 1)
+    : effectTimes(effect, owner.level, owner.seal, times, effects);
+  const scaling = effectScaling(effect, owner, times, effects, sealShownApart, ground);
+
+  if (effect.amount !== 'multiply') {
+    return {
+      label,
+      value: effect.value * scale,
+      kind: effect.amount === 'flat' ? 'base' : 'share',
+      parts: [{ label: effect.perLevel ? 'per level' : 'flat', value: effect.value, kind: 'base' }, ...scaling],
+    };
+  }
+
+  /* A terrain factor compounds, once per matching tile; every other is
+     applied once over the times met. Only the latter reads back as a chain. */
+  if (effect.where === 'terrain' && times / ground > 1) {
+    const tiles = times / ground;
+    return { label, value: (1 + (effect.value - 1) * (scale / tiles)) ** tiles, kind: 'factor' };
+  }
+
+  return {
+    label,
+    value: 1 + (effect.value - 1) * scale,
+    kind: 'factor',
+    parts: [
+      { label: effect.perLevel ? 'per level' : 'flat', value: effect.value, kind: 'base' },
+      { label: 'to share', value: -1, kind: 'added_before' },
+      ...scaling,
+      { label: 'to factor', value: 1, kind: 'added_after' },
+    ],
+  };
+}
+
+/* One term per effect feeding one quantity on one tile, in the engine's
+   shape: flat amounts the base, shares summed over it, factors multiplying
+   that. The rate or capacity seal is a factor of its own rather than folded
+   into each flat amount, which comes to the same. */
+function tileOwnTerms(anchor, quantity, rateOrCapacity) {
+  const owner = lastBoard?.tiles?.[anchor];
+  if (owner === undefined) return null;
+
+  const cells = footprintCells(anchor, owner.building, owner.orientation) ?? [anchor];
+  const beside = buildingsBeside(lastBoard, anchor, cells);
+  const effects = (effectsByBuilding.get(owner.building) ?? [])
+    .filter((e) => e.quantity === quantity && rateOrCapacityOf(e) === rateOrCapacity && e.where !== 'provides');
+
+  const terms = [];
+  for (const effect of effects) {
+    const times = effectReach(lastBoard, cells, beside, effect);
+    if (times === 0) continue;
+
+    const ground = effectGround(lastBoard, cells, effect);
+    terms.push(effectTerm(effect, owner, times, effectSource(effect, times / ground), effects, true, ground));
+  }
+
+  for (const aura of aurasMultiplying(lastBoard, cells, quantity, rateOrCapacity)) {
+    terms.push({ label: `${BUILDING_BY_KEY.get(aura.from)?.name ?? aura.from} aura`, value: aura.value, kind: 'factor' });
+  }
+
+  if (owner.seal === SEAL_FOR_RATE_OR_CAPACITY[rateOrCapacity] && GLOBAL_RESOURCES.includes(quantity)) {
+    terms.push({ label: SEAL_BY_KEY.get(owner.seal)?.name ?? owner.seal, value: SEAL_BONUS, kind: 'factor' });
+  }
+
+  return terms;
+}
+
+/* The same figure for one tile: the building's own worth, then the
+   village-wide shares and factors. What is added to the village's base or
+   total belongs to no tile and is dropped.
+
+   Fallback where the tile's effects cannot be read back: the engine's tile
+   figure divided by the village multiplier. */
+function tileBreakdown(breakdown, resourceKey, rateOrCapacity, tileIndex) {
+  const own = lastResult.tiles[rateOrCapacity][resourceKey][tileIndex];
+  const scaling = breakdown.terms.filter((t) => t.kind === 'share' || t.kind === 'factor');
+  const anchor = lastBoard === null ? null : occupancyMap(lastBoard.tiles)[tileIndex];
+  const mine = anchor === null ? null : tileOwnTerms(anchor, resourceKey, rateOrCapacity);
+
+  if (mine === null || mine.length === 0) {
+    const stages = breakdownStages(scaling);
+    return {
+      total: own,
+      terms: [{ label: 'this tile', value: own / (stages.shares * stages.factors), kind: 'base' }, ...scaling],
+    };
+  }
+
+  return { total: own, terms: [...mine, ...scaling] };
+}
+
+let breakdownModal = null;
+
+function buildBreakdownModal() {
+  if (breakdownModal !== null) return breakdownModal;
+
+  breakdownModal = document.createElement('div');
+  breakdownModal.className = 'modal breakdown-modal';
+  breakdownModal.hidden = true;
+  breakdownModal.innerHTML = '<div class="modal-backdrop" data-close-breakdown></div>'
+    + '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="breakdown-title">'
+    + '<div class="modal-head"><h2 id="breakdown-title"></h2>'
+    + '<button type="button" class="modal-close" data-close-breakdown title="Close (Esc)">&#10005;</button></div>'
+    + '<div class="breakdown-body"></div>'
+    + '<p class="breakdown-foot"><label><input type="checkbox" id="breakdown-all">'
+    + ' show neutral terms</label></p></div>';
+  document.body.append(breakdownModal);
+
+  breakdownModal.querySelectorAll('[data-close-breakdown]').forEach((el) => {
+    el.addEventListener('click', hideBreakdown);
+  });
+  breakdownModal.querySelector('#breakdown-all').addEventListener('change', () => {
+    reopenBreakdown();
+  });
+
+  return breakdownModal;
+}
+
+// The panel's name for a figure; the ids are enum paths, not names.
+function breakdownName(id, tileIndex) {
+  const [first, second, third] = id.split('.');
+
+  const named = first === SCHEMA.efficiencyField ? `${second} efficiency`
+    : first === 'effective' ? `${second}/t × ${third} efficiency`
+      : first === 'market' ? (second === 'tax' ? 'market tax' : `${second} sold`)
+        : second === SCHEMA.powerField ? `${first} power`
+          : second === CAPACITY ? `${first} cap`
+            : `${first}/t`;
+
+  return tileIndex === null ? named : `${named} @ ${tileIndex % WIDTH},${Math.floor(tileIndex / WIDTH)}`;
+}
+
+// Open terms by path, so a redraw leaves the panel as it was left.
+const expandedTerms = new Set();
+
+/* One row per term, grouped by the part it plays. A term made of others
+   carries them in `parts`, which open into a block under it. Headings only at
+   the top level: inside a block the signs carry the same meaning. */
+function breakdownRows(terms, showAll, path = '', depth = 0) {
+  let html = '';
+
+  for (const kind of BREAKDOWN_ORDER) {
+    const shown = terms
+      .map((term, at) => ({ term, at }))
+      .filter(({ term }) => term.kind === kind && (showAll || !isNeutralTerm(term)));
+    if (shown.length === 0) continue;
+
+    if (depth === 0) html += `<li class="fx-cols"><span class="fx-what">${BREAKDOWN_KINDS[kind].name}</span></li>`;
+
+    for (const { term, at } of shown) {
+      // An added term carries its own sign, so a negative one drops the plus.
+      const added = BREAKDOWN_KINDS[kind].sign === '+';
+      const value = added
+        ? `${term.value < 0 ? '-' : '+'}${fmt(Math.abs(term.value), 4)}`
+        : `${BREAKDOWN_KINDS[kind].sign}${fmt(term.value, 4)}`;
+
+      const here = `${path}/${at}`;
+      const parts = term.parts ?? [];
+      const open = expandedTerms.has(here);
+
+      const label = parts.length > 0
+        ? `<button type="button" class="breakdown-expand" data-expand="${here}">`
+          + `<span class="breakdown-caret">${open ? '▾' : '▸'}</span>${term.label}</button>`
+        : (term.from
+          ? `<button type="button" class="breakdown-link" data-breakdown="${term.from}">${term.label}</button>`
+          : term.label);
+
+      const marks = (isNeutralTerm(term) ? ' breakdown-nil' : '') + (open ? ' breakdown-open' : '');
+      html += `<li class="${marks.trim()}">`
+        + `<span class="fx-what">${label}</span>`
+        + `<span class="fx-value ${kind === 'factor' ? 'fx-times' : 'fx-plus'}">${value}</span></li>`;
+
+      if (open) {
+        html += '<li class="breakdown-parts"><ul class="fx-list breakdown-terms">'
+          + breakdownRows(parts, showAll, here, depth + 1) + '</ul></li>';
+      }
+    }
+  }
+
+  return html;
+}
+
+/* The steps and what they come to. For an engine-reported figure this is a
+   check: the terms are the page's, so agreement means it accounts for
+   everything the engine applied. */
+function breakdownSum(terms, total) {
+  const stages = breakdownStages(terms);
+  const steps = [`${fmt(stages.base, 4)}`];
+  if (stages.shares !== 1) steps.push(`× ${fmt(stages.shares, 4)}`);
+  if (stages.factors !== 1) steps.push(`× ${fmt(stages.factors, 4)}`);
+  if (stages.after !== 0) steps.push(`${stages.after > 0 ? '+' : '-'} ${fmt(Math.abs(stages.after), 4)}`);
+
+  const reached = stages.base * stages.shares * stages.factors + stages.after;
+  return {
+    reached,
+    agrees: Math.abs(reached - total) <= 1e-6 * Math.max(1, Math.abs(total)),
+    html: `${steps.join(' ')} = <b>${fmt(total, 4)}</b>`,
+  };
+}
+
+/* The panel: a title and one chain per figure. A row carrying both a share
+   and a factor gets a chain for each, the two reaching the village's
+   arithmetic by different routes. A chain that does not come to the engine's
+   figure is flagged: the fault is the panel's. */
+function showChains(title, chains) {
+  const modal = buildBreakdownModal();
+  const showAll = modal.querySelector('#breakdown-all').checked;
+
+  modal.querySelector('#breakdown-title').textContent = title;
+  modal.querySelector('.breakdown-body').innerHTML = chains.map((chain) => {
+    const sum = breakdownSum(chain.terms, chain.total);
+
+    return (chain.heading === undefined ? '' : `<h3 class="breakdown-heading">${chain.heading}</h3>`)
+      + `<p class="breakdown-sum${sum.agrees ? '' : ' breakdown-off'}">${sum.html}</p>`
+      + (sum.agrees ? '' : `<p class="breakdown-warning">steps give ${fmt(sum.reached, 4)}, engine reports ${fmt(chain.total, 4)}</p>`)
+      + `<ul class="fx-list breakdown-terms">${breakdownRows(chain.terms, showAll)}</ul>`;
+  }).join('');
+
+  modal.hidden = false;
+}
+
+// tileIndex narrows a resource to one tile's share, as the tile panel shows.
+function showBreakdown(id, tileIndex = null) {
+  const found = buildBreakdown(id);
+  if (found === null) return;
+
+  // only the resources are reported per tile
+  const [resourceKey, rateOrCapacity] = id.split('.');
+  const perTile = lastResult.tiles?.[rateOrCapacity]?.[resourceKey];
+  const explained = tileIndex === null || perTile === undefined
+    ? found
+    : tileBreakdown(found, resourceKey, rateOrCapacity, tileIndex);
+  const narrowed = explained === found ? null : tileIndex;
+
+  openBreakdown = { figure: id, tile: narrowed };
+  showChains(breakdownName(id, narrowed), [explained]);
+}
+
+/* What one tile contributes to the village's arithmetic rather than to its
+   own output: the shares and factors the stats panel shows only summed. */
+function tileTotalChains(anchor, quantity, rateOrCapacity) {
+  const owner = lastBoard?.tiles?.[anchor];
+  if (owner === undefined) return null;
+
+  const row = effectTotals(lastBoard, anchor, owner.level)
+    .find((one) => one.quantity === quantity && one.rateOrCapacity === rateOrCapacity);
+  if (row === undefined) return null;
+
+  const named = BUILDING_BY_KEY.get(owner.building)?.name ?? owner.building;
+  const auraTerms = row.auras.map((aura) => ({
+    label: `${BUILDING_BY_KEY.get(aura.from)?.name ?? aura.from} aura`,
+    value: aura.value,
+    kind: 'factor',
+  }));
+
+  const onTile = effectsByBuilding.get(owner.building) ?? [];
+  const fed = row.from.map(({ effect, times, ground }) => effectTerm(
+    effect, owner, times, effectSource(effect, times / ground), onTile, false, ground,
+  ));
+  const shares = fed.filter((term) => term.kind === 'share');
+  const factors = fed.filter((term) => term.kind === 'factor');
+
+  const chains = [];
+  if (row.share !== 0) {
+    chains.push({
+      heading: row.factor === 1 ? undefined : 'share',
+      total: row.share,
+      terms: [
+        { label: `${named} lvl ${owner.level}`, value: row.perLevelShare, kind: 'base', parts: asSum(shares) },
+        ...auraTerms,
+        // a flat share is village-wide outright: nothing on this tile scales it
+        { label: 'flat share', value: row.flatShare, kind: 'added_after' },
+      ],
+    });
+  }
+  // A factor reaches the village as what it adds above one, which is what auras multiply.
+  if (row.factor !== 1) {
+    chains.push({
+      heading: row.share === 0 ? undefined : 'factor',
+      total: row.factor,
+      terms: [
+        { label: `${named} lvl ${owner.level}`, value: row.ownFactor, kind: 'base', parts: asProduct(factors) },
+        { label: 'to share', value: -1, kind: 'added_before' },
+        ...auraTerms,
+        { label: 'to factor', value: 1, kind: 'added_after' },
+      ],
+    });
+  }
+
+  return { title: `${effectLabel(row)} · ${named} @ ${anchor % WIDTH},${Math.floor(anchor / WIDTH)}`, chains };
+}
+
+function showTileTotal(anchor, quantity, rateOrCapacity) {
+  const found = tileTotalChains(anchor, quantity, rateOrCapacity);
+  if (found === null) return;
+
+  openBreakdown = { tileTotal: { anchor, quantity, rateOrCapacity } };
+  showChains(found.title, found.chains);
+}
+
+/* What one aura a building provides comes to: an aura that does not cover
+   every quantity is multiplied by the ones that do. */
+function showTileAura(anchor, nth) {
+  const owner = lastBoard?.tiles?.[anchor];
+  if (owner === undefined) return;
+
+  const effects = effectsByBuilding.get(owner.building) ?? [];
+  const effect = effects.filter((e) => e.where === 'provides')[nth];
+  if (effect === undefined) return;
+
+  const cells = footprintCells(anchor, owner.building, owner.orientation) ?? [anchor];
+  const level = owner.level; // the centre's tile level is kept at the village's
+  const times = effectTimes(effect, level, owner.seal, 1, effects);
+  const named = BUILDING_BY_KEY.get(owner.building)?.name ?? owner.building;
+
+  const auras = effect.rateOrCapacity === 'both' ? [] : aurasOverEverything(lastBoard, cells);
+  const auraTerms = auras.map((aura) => ({
+    label: `${BUILDING_BY_KEY.get(aura.from)?.name ?? aura.from} aura`,
+    value: aura.value,
+    kind: 'factor',
+  }));
+  const reaching = auras.reduce((product, aura) => product * aura.value, 1);
+
+  // A factor reaches neighbours as what it adds above one; a share already is.
+  const terms = effect.amount === 'multiply'
+    ? [
+      { label: `${named} lvl ${level}`, value: 1 + (effect.value - 1) * times, kind: 'base' },
+      { label: 'to share', value: -1, kind: 'added_before' },
+      ...auraTerms,
+      { label: 'to factor', value: 1, kind: 'added_after' },
+    ]
+    : [{ label: `${named} lvl ${level}`, value: effect.value * times, kind: 'base' }, ...auraTerms];
+
+  const total = effect.amount === 'multiply'
+    ? 1 + (effect.value - 1) * times * reaching
+    : effect.value * times * reaching;
+
+  openBreakdown = { tileAura: { anchor, nth } };
+  showChains(`${effectLabel(effect)} aura · ${named} @ ${anchor % WIDTH},${Math.floor(anchor / WIDTH)}`, [{ total, terms }]);
+}
+
+// redraws whatever is open, after a reply or a change of board
+function reopenBreakdown() {
+  if (openBreakdown === null) return;
+  if (openBreakdown.figure !== undefined) showBreakdown(openBreakdown.figure, openBreakdown.tile);
+  else if (openBreakdown.tileAura !== undefined) showTileAura(openBreakdown.tileAura.anchor, openBreakdown.tileAura.nth);
+  else showTileTotal(openBreakdown.tileTotal.anchor, openBreakdown.tileTotal.quantity, openBreakdown.tileTotal.rateOrCapacity);
+}
+
+function hideBreakdown() {
+  if (breakdownModal !== null) breakdownModal.hidden = true;
+  openBreakdown = null;
+}
+
+// One listener for every figure: both panels are rebuilt constantly.
+document.addEventListener('click', (event) => {
+  const expand = event.target.closest('[data-expand]');
+  if (expand !== null) {
+    event.preventDefault();
+    const at = expand.dataset.expand;
+    if (expandedTerms.has(at)) expandedTerms.delete(at);
+    else expandedTerms.add(at);
+    reopenBreakdown();
+    return;
+  }
+
+  const aura = event.target.closest('[data-tile-aura]');
+  if (aura !== null) {
+    event.preventDefault();
+    const [anchor, nth] = aura.dataset.tileAura.split('|');
+    showTileAura(Number(anchor), Number(nth));
+    return;
+  }
+
+  const row = event.target.closest('[data-tile-total]');
+  if (row !== null) {
+    event.preventDefault();
+    const [anchor, quantity, rateOrCapacity] = row.dataset.tileTotal.split('|');
+    showTileTotal(Number(anchor), quantity, rateOrCapacity);
+    return;
+  }
+
+  const target = event.target.closest('[data-breakdown]');
+  if (target === null) return;
+
+  event.preventDefault();
+  const tile = target.dataset.tile;
+  showBreakdown(target.dataset.breakdown, tile === undefined ? null : Number(tile));
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && breakdownModal !== null && !breakdownModal.hidden) {
+    event.stopPropagation();
+    hideBreakdown();
+  }
+}, true);

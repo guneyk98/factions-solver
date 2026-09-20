@@ -35,12 +35,25 @@ enum class Ranking {
     WeightedSum,
 };
 
+/* A terraform budget of None leaves the terrain as the map has it; Unlimited
+   bounds the count by nothing but the arrangement. Only a tile a building
+   stands on is ever terraformed, and only to a terrain that building's own
+   effects name, since terrain reaches the output through Where::Terrain
+   alone. */
+namespace Terraforming {
+inline constexpr int None = 0;
+inline constexpr int Unlimited = -1;
+} // namespace Terraforming
+
 struct SearchLimits {
     int restarts = 24;
     int iterations = 100000;
     int improvementPasses = 40; // how many times the best single change may be applied
     long long budget = 200000;  // arrangements evaluated, per restart
     std::uint64_t seed = 0x9E3779B97F4A7C15ull;
+
+    // How many tiles the search may terraform, or one of the two constants above.
+    int terraform = Terraforming::None;
 
     /* Which restarts to run, so the work can be split across workers. A
        restartCount of 0 runs every restart from firstRestart onwards. Each
@@ -57,6 +70,7 @@ struct SearchResult {
     std::vector<double> bestAlone; // what each goal reaches when optimised by itself
     long long evaluated = 0;       // arrangements scored, over the whole run
     int moved = 0;
+    int terraformed = 0; // tiles whose terrain differs from the map's own
 };
 
 // `game` selects which round's rules score an arrangement; 0 selects the newest.

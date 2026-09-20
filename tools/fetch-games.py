@@ -158,6 +158,12 @@ def village(entry, seen, over):
         'faction': entry.get('faction') or '',
         'level': (seen.get('hq') or {}).get('level') or 1,
         'terrain': [t for row in seen['grid']['terrain'] for t in row],
+        # grid.terraformedTiles is "x,y" per tile; the page indexes by tile.
+        'terraformed': sorted(
+            int(y) * len(seen['grid']['terrain'][0]) + int(x)
+            for x, y in (at.split(',') for at in (seen['grid'].get('terraformedTiles') or []))
+        ),
+        'terrainBonusFactor': (seen['grid'].get('terrainBonusFactor') or 1),
         'buildings': [
             {'name': b['name'], 'level': b.get('level') or 1,
              'x': b.get('gridX'), 'y': b.get('gridY'), 'rotation': b.get('rotation') or 0,

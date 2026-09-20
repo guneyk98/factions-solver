@@ -136,6 +136,8 @@ std::expected<ParsedVillage, Error> readableVillage(std::string_view text)
     std::vector<std::string_view> layout;
     int game = 0;
     int season = -1;
+    double terrainBonusFactor = 1.0;
+    std::array<bool, TileCount> terraformed{};
 
     for (const std::string_view token : Text::words(text)) {
         const std::size_t eq = token.find('=');
@@ -157,6 +159,22 @@ std::expected<ParsedVillage, Error> readableVillage(std::string_view text)
             season = *which;
             continue;
         }
+        if (token.substr(0, eq) == "terrain_bonus_factor") {
+            const std::optional<double> factor = number<double>(token.substr(eq + 1));
+            if (!factor || !(*factor >= 1.0))
+                return fail(std::format("invalid terrain bonus factor '{}', must be at least 1", token.substr(eq + 1)));
+            terrainBonusFactor = *factor;
+            continue;
+        }
+        if (token.substr(0, eq) == "terraformed") {
+            for (const std::string_view one : Text::split(token.substr(eq + 1), ',')) {
+                const std::optional<std::size_t> at = number<std::size_t>(one);
+                if (!at || *at >= TileCount)
+                    return fail(std::format("invalid terraformed tile '{}', expected an index below {}", one, TileCount));
+                terraformed[*at] = true;
+            }
+            continue;
+        }
         if (const std::optional<Error> trouble = takeModifier(modifiers, token, eq))
             return std::unexpected{*trouble};
     }
@@ -171,11 +189,14 @@ std::expected<ParsedVillage, Error> readableVillage(std::string_view text)
         return fail(std::format("invalid village level '{}', must be at least 1", layout.front()));
     village.level = *village_level;
 
+    village.terrainBonusFactor = terrainBonusFactor;
+
     for (std::size_t i = 0; i < TileCount; ++i) {
         const std::expected<Tile, Error> tile = takeTile(layout[i + 1], i);
         if (!tile)
             return std::unexpected{tile.error()};
         village[i] = *tile;
+        village.setTerraformed(i, terraformed[i]);
     }
 
     if (std::optional<std::string> trouble = validate(village, Rules::of(game).game()))
@@ -242,10 +263,11 @@ std::expected<SearchLimits, Error> effort(std::string_view spec)
     // Every setting is a non-negative integer parsed the same way; only the
     // field it lands in differs. A budget counts arrangements, so it alone
     // needs the wider type.
-    constexpr std::array<std::string_view, 6> names{"restarts", "iterations", "improvementPasses", "budget", "first", "count"};
+    constexpr std::array<std::string_view, 7> names{"restarts", "iterations", "improvementPasses", "budget", "first", "count", "terraform"};
 
-    // A slice of the restarts may legitimately start at 0 or be empty.
-    const auto lowerBoundFor = [](std::string_view name) { return name == "first" || name == "count" ? 0 : 1; };
+    /* A slice of the restarts may legitimately start at 0 or be empty, and a
+       terraform budget of 0 is what leaves the terrain alone. */
+    const auto lowerBoundFor = [](std::string_view name) { return name == "first" || name == "count" || name == "terraform" ? 0 : 1; };
 
     for (const std::string_view term : Text::split(spec, ',')) {
         if (term.empty())
@@ -261,6 +283,13 @@ std::expected<SearchLimits, Error> effort(std::string_view spec)
             return fail(std::format("unknown setting '{}'; expected {}", name, listed(names)));
 
         const std::string_view text = term.substr(equals + 1);
+
+        // The one setting that is not a count: how many tiles may be terraformed.
+        if (name == "terraform" && text == "unlimited") {
+            limits.terraform = Terraforming::Unlimited;
+            continue;
+        }
+
         const long long lowerBound = lowerBoundFor(name);
         const std::optional<long long> value = number<long long>(text);
         if (!value || *value < lowerBound)
@@ -274,7 +303,8 @@ std::expected<SearchLimits, Error> effort(std::string_view spec)
         case 2: limits.improvementPasses = static_cast<int>(*value); break;
         case 3: limits.budget = *value; break;
         case 4: limits.firstRestart = static_cast<int>(*value); break;
-        default: limits.restartCount = static_cast<int>(*value); break;
+        case 5: limits.restartCount = static_cast<int>(*value); break;
+        default: limits.terraform = static_cast<int>(*value); break;
         }
     }
 

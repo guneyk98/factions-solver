@@ -26,6 +26,9 @@ const state = {
   // prices the village at a chosen season's multiplier.
   season: null,
   villageLevel: 5,
+  // What a terraformed tile scales its terrain effects by: the fertile
+  // grounds perk, 1 + 0.05 a point. grid.terrainBonusFactor in the api.
+  terrainBonusFactor: 1,
   tiles: [],
   panel: 'place',
   mode: 'build',
@@ -47,6 +50,10 @@ const state = {
   workerMode: WORKER_MODES[0].key,
   unit: UNIT_READINGS[0].key,
   marketGoals: false,
+  /* Whether the search may terraform the tiles a building stands on, and how
+     many tiles it may terraform: `tiles` when counted, unbounded when
+     unlimited. */
+  terraform: { allowed: false, tiles: 6, unlimited: false },
   effort: 'normal',
   customEffort: { ...EFFORTS.normal },
   balance: false,
@@ -63,7 +70,7 @@ let savedLayout = null;
 const startingGround = terrainRows(GAME_BY_ID.get(state.game) ?? GAMES[0]);
 for (let y = 0; y < HEIGHT; y += 1) {
   for (let x = 0; x < WIDTH; x += 1) {
-    state.tiles.push({ terrain: startingGround[y][x], building: EMPTY, level: 0, orientation: EAST, seal: NO_SEAL });
+    state.tiles.push({ terrain: startingGround[y][x], building: EMPTY, level: 0, orientation: EAST, seal: NO_SEAL, terraformed: false });
   }
 }
 /* A village starts as its centre on otherwise bare ground, placed on the
@@ -180,6 +187,7 @@ const levelEl = document.getElementById('insp-level');
 const levelInput = document.getElementById('tile-level');
 const levelHintEl = document.getElementById('level-hint');
 const villageLevelInput = document.getElementById('village-level');
+const terrainBonusInput = document.getElementById('terrain-bonus');
 const countEl = document.getElementById('building-count');
 const terrainToggle = document.getElementById('terrain-toggle');
 const terrainPalette = document.getElementById('terrain-palette');
@@ -385,6 +393,13 @@ function renderHeader() {
     || Number(villageLevelInput.value) !== state.villageLevel) {
     villageLevelInput.value = String(state.villageLevel);
   }
+
+  // entered as the percentage it adds, held as the factor
+  const percent = Math.round((state.terrainBonusFactor - 1) * 100);
+  if (document.activeElement !== terrainBonusInput || Number(terrainBonusInput.value) !== percent) {
+    terrainBonusInput.value = String(percent);
+  }
+  terrainBonusInput.classList.toggle('modifier-on', percent !== 0);
 }
 
 let noticeTimer = null;
@@ -399,9 +414,22 @@ function showStatus(message, isError = false) {
 let inspected = null;
 let inspectedAnchor = null;
 
+/* Leaving the grid clears the hover, which would take the tile out from under
+   the inspector's own controls, so the panel holds the tile it is showing
+   while the pointer is over it, as it does while its level field has focus. */
+let pointerOverInspector = false;
+const inspectorEl = document.querySelector('.inspector');
+
+inspectorEl.addEventListener('pointerenter', () => { pointerOverInspector = true; });
+inspectorEl.addEventListener('pointerleave', () => {
+  pointerOverInspector = false;
+  renderInspector();
+});
+
 function renderInspector() {
   const editing = document.activeElement === levelInput;
-  const i = editing ? inspected : (state.hovered !== null ? state.hovered : state.selected);
+  const holding = editing || pointerOverInspector;
+  const i = holding ? inspected : (state.hovered !== null ? state.hovered : state.selected);
   inspected = i;
 
   emptyEl.hidden = i !== null;
@@ -424,7 +452,17 @@ function renderInspector() {
     : `<img class="tile-art" src="${buildingImage(owner.building, owner.level)}"
          alt="${info.name}" title="${info.name}">`;
 
+  // A terraform only ever swaps one buildable ground for another.
+  const terraformable = buildable(i);
+  const terraformed = tile.terraformed === true;
+  const mark = terraformable
+    ? `<button type="button" class="tile-terraformed${terraformed ? ' on' : ''}" data-terraform="${i}"
+         aria-pressed="${terraformed}"
+         title="Terraformed ground: its terrain bonuses are worth the fertile grounds perk more">terraformed</button>`
+    : '';
+
   basicsEl.innerHTML = `<span class="tile-ground ${terrain.key}">${terrain.name}</span>`
+    + mark
     + `<span class="tile-where">${x}, ${y}</span>`
     + `<span class="tile-face">${picture}</span>`;
 
@@ -458,13 +496,15 @@ function renderInspector() {
     sealNoteEl.innerHTML = reason ?? '';
   }
 
-  detailEl.innerHTML = tileDetail({ tiles: state.tiles, result: state.result }, i, anchor);
+  detailEl.innerHTML = tileDetail(
+    { tiles: state.tiles, result: state.result, terrainBonusFactor: state.terrainBonusFactor }, i, anchor,
+  );
 }
 
 function render() {
   renderHeader();
   renderGrid();
-  renderStatsPanel(state.result);
+  renderStatsPanel(state.result, state.modifiers);
   renderInspector();
   renderPaletteLimits();
   renderModifierPanel(state.modifiers);
@@ -1102,6 +1142,27 @@ gridEl.addEventListener('wheel', (event) => {
 
 /* ------------------------------ controls ------------------------------ */
 
+basicsEl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-terraform]');
+  if (button === null) return;
+
+  const at = Number(button.dataset.terraform);
+  state.tiles[at].terraformed = !state.tiles[at].terraformed;
+  render();
+  recompute();
+  saveSoon();
+});
+
+terrainBonusInput.addEventListener('input', () => {
+  const percent = Number(terrainBonusInput.value);
+  const factor = 1 + (Number.isFinite(percent) ? Math.max(0, percent) : 0) / 100;
+  if (factor === state.terrainBonusFactor) return;
+
+  state.terrainBonusFactor = factor;
+  render();
+  recompute();
+});
+
 villageLevelInput.addEventListener('input', () => {
   const before = state.villageLevel;
   setVillageLevel(Number(villageLevelInput.value));
@@ -1191,6 +1252,14 @@ function layoutText() {
     if (tile.seal !== NO_SEAL) token += `:${tile.seal}`;
     parts.push(token);
   }
+
+  /* With the layout rather than the settings, so every saved, shared and
+     undone layout carries the ground. */
+  const terraformed = state.tiles.flatMap((tile, i) => (tile.terraformed ? [i] : []));
+  if (terraformed.length > 0) {
+    parts.push(`terrain_bonus_factor=${state.terrainBonusFactor}`, `terraformed=${terraformed.join(',')}`);
+  }
+
   return parts.join(' ');
 }
 
@@ -1201,7 +1270,9 @@ async function loadLayout(text) {
 
   for (let i = 0; i < TILE_COUNT; i += 1) {
     state.tiles[i].terrain = village.terrain[i];
+    state.tiles[i].terraformed = village.terraformed?.[i] === true;
   }
+  if (Number.isFinite(village.terrainBonusFactor)) state.terrainBonusFactor = village.terrainBonusFactor;
   applyLayout(village);
   setVillageLevel(village.level);
   return village.level;
@@ -1216,7 +1287,7 @@ function serialize() {
   for (const { id, neutral, percent } of GAME_MODIFIERS) {
     const entered = state.modifiers[id];
     if (entered === neutral) continue;
-    parts.push(`${id}=${(percent ? entered / 100 : entered).toFixed(4)}`);
+    parts.push(`${id}=${(percent ? entered / 100 : entered).toFixed(MODIFIER_DECIMALS)}`);
   }
 
   const politics = state.modifiers[POLITICS_ID];
@@ -1303,7 +1374,7 @@ function recompute() {
 
 function saveAndRender() {
   saveSoon();
-  renderStatsPanel(state.result);
+  renderStatsPanel(state.result, state.modifiers);
   renderGrid();
   renderInspector();
 }
@@ -1548,8 +1619,47 @@ marketBox.addEventListener('change', () => {
   saveSoon();
 });
 
+const terraformBox = document.getElementById('terraform-allowed');
+const terraformTilesInput = document.getElementById('terraform-tiles');
+const terraformUnlimitedBox = document.getElementById('terraform-unlimited');
+const terraformBudgetRow = document.getElementById('terraform-budget-row');
+const terraformUnlimitedRow = document.getElementById('terraform-unlimited-row');
+
+function renderTerraform() {
+  terraformBox.checked = state.terraform.allowed;
+  terraformUnlimitedBox.checked = state.terraform.unlimited;
+  terraformUnlimitedRow.hidden = !state.terraform.allowed;
+  terraformBudgetRow.hidden = !state.terraform.allowed || state.terraform.unlimited;
+
+  const shown = String(state.terraform.tiles);
+  if (terraformTilesInput.value !== shown) terraformTilesInput.value = shown;
+}
+
+terraformBox.addEventListener('change', () => {
+  state.terraform.allowed = terraformBox.checked;
+  renderTerraform();
+  saveSoon();
+});
+
+terraformUnlimitedBox.addEventListener('change', () => {
+  state.terraform.unlimited = terraformUnlimitedBox.checked;
+  renderTerraform();
+  saveSoon();
+});
+
+terraformTilesInput.addEventListener('input', () => {
+  const typed = Number(terraformTilesInput.value);
+  if (!Number.isInteger(typed) || typed < 0) return;
+  state.terraform.tiles = Math.min(typed, TILE_COUNT);
+  saveSoon();
+});
+
 function applyLayout(layout) {
   for (let i = 0; i < TILE_COUNT; i += 1) {
+    // Terrain first: a search allowed to terraform returns terrain of its
+    // own, and the tiles it changed are terraformed ground from here on.
+    state.tiles[i].terrain = layout.terrain[i];
+    state.tiles[i].terraformed = layout.terraformed?.[i] === true;
     setBuilding(i, layout.buildings[i], layout.levels[i], layout.orientations[i], layout.seals[i]);
   }
 }
@@ -1581,9 +1691,12 @@ function reportSolve(found, took) {
   });
 
   const tried = `${found.evaluated.toLocaleString('en-US')} layouts tried in ${elapsed(took)}.`;
-  const summary = found.moved === 0
+  const changed = [];
+  if (found.moved > 0) changed.push(`${plural(found.moved, 'building')} moved`);
+  if (found.terraformed > 0) changed.push(`${plural(found.terraformed, 'tile')} terraformed`);
+  const summary = changed.length === 0
     ? `No better layout found. ${tried}`
-    : `${plural(found.moved, 'building')} moved, ${tried}`;
+    : `${changed.join(', ')}, ${tried}`;
 
   solveResult.innerHTML = (rows.length > 0 ? `<ul class="solve-goals">${rows.join('')}</ul>` : '')
     + `<p class="solve-summary">${summary}</p>`;
@@ -1844,6 +1957,7 @@ function controls() {
     workerMode: state.workerMode,
     unit: state.unit,
     marketGoals: state.marketGoals,
+    terraform: { ...state.terraform },
     effort: state.effort,
     customEffort: { ...state.customEffort },
     balance: state.balance,
@@ -1902,6 +2016,11 @@ function restoreFromStorage() {
   if (WORKER_MODES.some((m) => m.key === view.workerMode)) state.workerMode = view.workerMode;
   if (UNIT_READINGS.some((one) => one.key === view.unit)) state.unit = view.unit;
   state.marketGoals = view.marketGoals === true;
+
+  state.terraform.allowed = view.terraform?.allowed === true;
+  state.terraform.unlimited = view.terraform?.unlimited === true;
+  const terraformTiles = view.terraform?.tiles;
+  if (Number.isInteger(terraformTiles) && terraformTiles >= 0) state.terraform.tiles = terraformTiles;
 
   if (view.effort === 'custom' || Object.hasOwn(EFFORTS, view.effort)) state.effort = view.effort;
   for (const name of EFFORT_FIELDS) {
@@ -2138,10 +2257,14 @@ function orientationOf(key, rotation) {
 }
 
 function usePlayer(one) {
+  const terraformed = new Set(one.terraformed ?? []);
+
   for (let i = 0; i < TILE_COUNT; i += 1) {
     state.tiles[i].terrain = one.terrain[i];
+    state.tiles[i].terraformed = terraformed.has(i);
     setBuilding(i, EMPTY, 0);
   }
+  state.terrainBonusFactor = one.terrainBonusFactor ?? 1;
 
   setBuilding(index(one.hqX, one.hqY), CENTRE, 1);
 
@@ -2408,9 +2531,16 @@ function currentEffort() {
   return state.effort === 'custom' ? state.customEffort : EFFORTS[state.effort];
 }
 
+/* How many tiles the search may terraform. 0 leaves the map's own terrain
+   unchanged, which is what the engine does by default. */
+function terraformSpec() {
+  if (!state.terraform.allowed) return 'terraform=0';
+  return state.terraform.unlimited ? 'terraform=unlimited' : `terraform=${state.terraform.tiles}`;
+}
+
 function effortSpec() {
   const limits = currentEffort();
-  return EFFORT_FIELDS.map((name) => `${name}=${limits[name]}`).join(',');
+  return `${EFFORT_FIELDS.map((name) => `${name}=${limits[name]}`).join(',')},${terraformSpec()}`;
 }
 
 function renderEffort() {
@@ -2726,6 +2856,11 @@ const fetchScriptFor = (game, who) => `(async () => {
       level: (seen.hq || {}).level || 1,
       hqX: where.x, hqY: where.y,
       terrain: grid.terrain.flat(),
+      terraformed: (grid.terraformedTiles || []).map((at) => {
+        const [tx, ty] = String(at).split(',').map(Number);
+        return ty * 10 + tx;
+      }),
+      terrainBonusFactor: grid.terrainBonusFactor || 1,
       buildings: (seen.buildings || [])
         .filter((b) => b.gridX != null && b.gridY != null)
         .map((b) => ({
@@ -2929,6 +3064,8 @@ function parseRoster(reply) {
       hqX: one.hqX,
       hqY: one.hqY,
       terrain: one.terrain,
+      terraformed: Array.isArray(one.terraformed) ? one.terraformed.filter(Number.isInteger) : [],
+      terrainBonusFactor: Number.isFinite(one.terrainBonusFactor) ? one.terrainBonusFactor : 1,
       buildings: one.buildings,
       modifiers: modifiersFromEffects(one.effects),
     });
@@ -3161,6 +3298,7 @@ if (restored !== null) {
 renderGames();
 renderSeasons();
 renderGoals();
+renderTerraform();
 setMode(state.mode);
 showView(state.panel);
 render();

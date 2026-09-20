@@ -463,8 +463,10 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
 
             case Game::Where::Terrain: // once per covered tile of the named terrain
                 for (std::size_t cell = 0; cell < count; ++cell)
-                    if (targets & Rules::bit(village[cells[cell]].terrain))
-                        totals[rules.runningTotalOfEffect(tile.building, n)].add(effect, effect.value, perLevel);
+                    if (targets & Rules::bit(village[cells[cell]].terrain)) {
+                        const double ground = village.terraformed(cells[cell]) ? village.terrainBonusFactor : 1.0;
+                        totals[rules.runningTotalOfEffect(tile.building, n)].add(effect, effect.value, perLevel * ground);
+                    }
                 break;
 
             case Game::Where::Adjacent: { // once per adjacent building it names
@@ -663,6 +665,9 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
         total = (total + addedBeforeMultiplication(resource, rateOrCapacity)) * multiplier + modifiers.forQuantity(resource, rateOrCapacity).addedAfterMultiplier();
     };
 
+    const ResourceTotals productionFromBuildings = output.production;
+    const ResourceTotals storageFromBuildings = output.storage;
+
     for (const Resource resource : Enum::values<Resource>()) {
         applyModifiersTo(output.production[resource], resource, RateOrCapacity::Rate, perTickMultiplier[resource]);
         applyModifiersTo(output.storage[resource], resource, RateOrCapacity::Capacity, capacityMultiplier[resource]);
@@ -704,6 +709,8 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
         }
     }
 
+    const std::array<double, Enum::Count<Unit>> unitsFromBuildings = output.units;
+
     for (const Unit unit : Enum::values<Unit>()) {
         const auto unitIndex = static_cast<std::size_t>(unit);
         const ModifierSet& set = modifiers.forQuantity(unit);
@@ -731,6 +738,20 @@ Output runEffects(const Rules& rules, const GameModifiers& modifiers, const Vill
             detail->global.production[resource] = perTickMultiplier[resource] - 1;
             detail->global.storage[resource] = capacityMultiplier[resource] - 1;
         }
+
+        detail->from_buildings = FromBuildings{
+            .production = productionFromBuildings,
+            .storage = storageFromBuildings,
+            .shares = sharesFromBuildings,
+            .multipliers = multipliersFromBuildings,
+            .efficiency = efficiencyRatings,
+            .power = powerRatings,
+            .units = unitsFromBuildings,
+            .unit_shares = unitShares,
+            .unit_multipliers = unitMultipliers,
+            .market_tax = rules.marketTax(),
+            .tax_reduction = taxReduction,
+        };
     }
 
     return output;

@@ -86,7 +86,8 @@ int effort(std::string_view spec)
               << " improvementPasses=" << limits->improvementPasses
               << " budget=" << limits->budget
               << " first=" << limits->firstRestart
-              << " count=" << limits->restartCount << '\n';
+              << " count=" << limits->restartCount
+              << " terraform=" << limits->terraform << '\n';
     return 0;
 }
 
@@ -195,9 +196,15 @@ int bench(const std::string& text)
     const auto goals = Parse::goals("wood.production");
     const std::span<const Goal> span{goals->goals};
     for (const long long budget : {10000LL, 100000LL}) {
+        /* budget and iterations are per restart: divided so the whole run
+           evaluates `budget` arrangements, iterations clearing the budget so a
+           restart ends on the budget rather than on the step count. */
+        constexpr int restarts = 64;
+
         SearchLimits limits;
-        limits.budget = budget;
-        limits.restarts = 1000000;
+        limits.restarts = restarts;
+        limits.budget = budget / restarts;
+        limits.iterations = static_cast<int>(limits.budget);
 
         const auto start = Clock::now();
         const SearchResult found = rearrange(parsed->modifiers, parsed->village, span, Ranking::Lexicographic, limits, parsed->game);

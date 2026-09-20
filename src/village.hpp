@@ -3,6 +3,7 @@
 #include "game.hpp"
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <span>
@@ -484,6 +485,10 @@ public:
 
     int level = 1;
 
+    // What a terraformed tile scales its terrain effects by: the fertile
+    // grounds perk, 1 + 0.05 a point. grid.terrainBonusFactor in the api.
+    double terrainBonusFactor = 1.0;
+
     static constexpr std::size_t index(std::size_t x, std::size_t y) { return y * Width + x; }
     static constexpr std::pair<std::size_t, std::size_t> coordinates(std::size_t index)
     {
@@ -498,8 +503,22 @@ public:
     Tile& operator[](std::size_t i) { return tiles[i]; }
     const Tile& operator[](std::size_t i) const { return tiles[i]; }
 
+    /* Terraformed ground, grid.terraformedTiles in the api. A bit per tile
+       rather than a field on Tile, which would cost four bytes a tile in
+       padding on every Village the search copies. */
+    bool terraformed(std::size_t i) const { return (terraformed_[i / 64] >> (i % 64) & 1) != 0; }
+    void setTerraformed(std::size_t i, bool ground)
+    {
+        const std::uint64_t bit = std::uint64_t{1} << (i % 64);
+        if (ground)
+            terraformed_[i / 64] |= bit;
+        else
+            terraformed_[i / 64] &= ~bit;
+    }
+
 private:
     std::array<Tile, Width * Height> tiles;
+    std::array<std::uint64_t, (Width * Height + 63) / 64> terraformed_{};
 };
 
 /* Checks overlap, per-building limits, levels, seals and the slot budget, and
@@ -715,10 +734,31 @@ struct GlobalModifiers {
     ResourceTotals production, storage;
 };
 
+/* Building contributions before any modifier, as a base, as shares and as
+   factors. Plain arrays, nothing that allocates: a search runs runEffects
+   millions of times and pays for this on every one. */
+struct FromBuildings {
+    ResourceTotals production{}, storage{};
+
+    // village-wide: applied to the totals above, not to the providing tile
+    std::array<std::array<double, Enum::Count<RateOrCapacity>>, Enum::Count<Resource>> shares{}, multipliers{};
+
+    std::array<double, Enum::Count<Efficiency>> efficiency{};
+    std::array<double, Enum::Count<Power>> power{};
+
+    std::array<double, Enum::Count<Unit>> units{}, unit_shares{}, unit_multipliers{};
+
+    double market_tax = 0.0;    // before any reduction
+    double tax_reduction = 0.0; // what the buildings take off it
+};
+
 struct ProductionDetail {
     GlobalModifiers global{};
     ResourceGrids production{};
     ResourceGrids storage{};
+
+    // only for the detail reply; the search never reads it
+    FromBuildings from_buildings{};
 };
 
 // The traversals the engine makes over a village, and the seal arithmetic.

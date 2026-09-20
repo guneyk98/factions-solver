@@ -133,7 +133,7 @@ function scriptText(upTo = state.shown) {
   for (const { id, neutral, percent } of GAME_MODIFIERS) {
     const entered = state.modifiers[id];
     if (entered === neutral) continue;
-    settings.push(`${id}=${(percent ? entered / 100 : entered).toFixed(4)}`);
+    settings.push(`${id}=${(percent ? entered / 100 : entered).toFixed(MODIFIER_DECIMALS)}`);
   }
   if (state.modifiers[POLITICS_ID] !== NO_POLITICS) settings.push(`${POLITICS_ID}=${state.modifiers[POLITICS_ID]}`);
 
@@ -980,7 +980,7 @@ function render() {
   renderSteps();
   renderSealStore();
   renderInspector();
-  renderStatsPanel(report === null ? null : report.production);
+  renderStatsPanel(report === null ? null : report.production, state.modifiers);
   renderModifierPanel(state.modifiers);
 
   const cost = costOfNextPurchase();
