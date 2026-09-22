@@ -95,21 +95,6 @@ class Strings:
         out.append('')
 
 
-def guild_hall_corrected(building, effect):
-    """The guild hall's adjacency aura, reinterpreted as an aura over every
-    per-tick quantity.
-
-    The api gives it subtype "workers" over TAVERN and MERCENARY_OFFICE, but in
-    the game it multiplies a mercenary office's soldiers per tick by the same
-    factor as its workers. Dropping the subtype makes it an aura over
-    everything those two produce, which is equivalent for the tavern (workers
-    are all it produces) and matches observation for the mercenary office.
-    """
-    if building['name'] != 'GUILD_HALL' or effect.get('subtype') != 'workers':
-        return effect
-    return {**effect, 'subtype': None}
-
-
 def effects_of(building, pool, dropped):
     """Every effect the api gives this building, in one flat list."""
     rows = []
@@ -155,7 +140,7 @@ def effects_of(building, pool, dropped):
         add('Adjacent', e, tuple(e.get('targets') or ([e['target']] if 'target' in e else ())))
     for e in building.get('providesAdjacency') or []:
         cats = e.get('categories')
-        add('Provides', guild_hall_corrected(building, e),
+        add('Provides', e,
             tuple(cats or e.get('targets') or ([e['target']] if 'target' in e else ())),
             by_category=bool(cats))
     return rows
