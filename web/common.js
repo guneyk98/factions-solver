@@ -153,6 +153,7 @@ const BUILDINGS = joined(SCHEMA.buildings, {
   BUILDERS_BUREAU: { name: "Builders' bureau", img: `${ART}/builders_bureau.png` },
   MARKET: { name: 'Market', img: `${ART}/market.png` },
   ARENA: { name: 'Arena', img: `${ART}/arena.png` },
+  WAR_CAMP: { name: 'War camp', img: `${ART}/war_camp.png` },
   GUILD_HALL: { name: 'Guild hall', img: `${ART}/guild_hall.png` },
   TOWN_HALL: { name: 'Town hall', img: `${ART}/town_hall.png` },
   MERCENARY_OFFICE: { name: 'Mercenary office', img: `${ART}/mercenary_office.png` },

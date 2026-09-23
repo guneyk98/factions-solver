@@ -46,6 +46,22 @@ if(NOT GAME_DATA)
         "See the top of tools/fetch-games.py for what it reads and what it keeps.")
 endif()
 
+# The building table, generated from the same data: one row per building any
+# round offers, which village.hpp indexes by Building.
+set(BUILDINGS_CPP ${CMAKE_BINARY_DIR}/buildings.gen.cpp)
+# Written beside it: the Building and BuildingType enumerations village.hpp
+# includes.
+set(BUILDINGS_HPP ${CMAKE_BINARY_DIR}/buildings.gen.hpp)
+
+add_custom_command(
+    OUTPUT ${BUILDINGS_CPP} ${BUILDINGS_HPP}
+    COMMAND ${CMAKE_COMMAND} -E env python3
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/buildings-to-cpp.py ${BUILDINGS_CPP}
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/buildings-to-cpp.py ${GAME_DATA}
+    COMMENT "Writing buildings.gen.cpp from data/games"
+    VERBATIM
+)
+
 add_custom_command(
     OUTPUT ${GAMES_CPP} ${GAMES_HPP}
     COMMAND ${CMAKE_COMMAND} -E env python3
@@ -67,6 +83,7 @@ set(ENGINE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/effects.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/village.cpp
     ${GAMES_CPP}
+    ${BUILDINGS_CPP}
 )
 
 set(ENGINE_HEADERS
@@ -79,6 +96,7 @@ set(ENGINE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/simulate.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/text.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/village.hpp
+    ${BUILDINGS_HPP}
 )
 
 add_executable(Server src/server.cpp)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "buildings.gen.hpp"
 #include "game.hpp"
 
 #include <array>
@@ -21,49 +22,6 @@ enum class Terrain {
     Swamp,
 
     Count // keep last; every enumerator above needs an id in Terrains
-};
-
-enum class Building {
-    None,
-    Hut,
-    Mine,
-    Sawmill,
-    Furnace,
-    VillageCentre,
-    Obelisk,
-    KnightTrainingCentre,
-    GuardianTrainingCentre,
-    Storehouse,
-    Warehouse,
-    TrainingCentre,
-    Tavern,
-    House,
-    GuardTower,
-    Shipyard,
-    ResearchCentre,
-    BuildersBureau,
-    Market,
-    Arena,
-    GuildHall,
-    TownHall,
-    MercenaryOffice,
-    GarrisonHall,
-    RecyclingWorkshop,
-    Academy,
-
-    Count // keep last; every enumerator above needs a row in Buildings's table
-};
-
-// The build-menu category of a building. It affects no output; it is here so
-// that one table describes a building completely.
-enum class BuildingType {
-    None,
-    Economy,
-    Military,
-    Worker,
-    Support,
-
-    Count // keep last; every enumerator above needs an id in BuildingTypes
 };
 
 enum class Seal {
@@ -404,16 +362,16 @@ constexpr std::optional<Politics> tryFromId(std::string_view id) { return Enum::
 } // namespace PoliticsChoices
 
 namespace BuildingTypes {
-inline constexpr std::array<std::string_view, Enum::Count<BuildingType>> Ids{
-    "NONE", "ECONOMY", "MILITARY", "WORKER", "SUPPORT"
-};
+static_assert(Ids.size() == Enum::Count<BuildingType>, "every building type needs an id");
 static_assert(Enum::allDifferent(Ids), "each building type needs an id of its own");
 
 constexpr std::string_view toId(BuildingType type) { return Ids[static_cast<std::size_t>(type)]; }
 } // namespace BuildingTypes
 
-// Indexed by the enumerator. Shape is absent: the games disagree on it, so it
-// is read per game from Game::Building. See shapeOf below.
+/* Indexed by the enumerator. The table itself is generated into
+   buildings.gen.cpp by tools/buildings-to-cpp.py from data/games/. Shape is
+   absent: the games disagree on it, so it is read per game from
+   Game::Building. See shapeOf below. */
 namespace Buildings {
 struct Info {
     Building building;

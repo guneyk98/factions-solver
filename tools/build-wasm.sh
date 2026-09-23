@@ -16,7 +16,7 @@ em++ -O3 -flto -DNDEBUG -std=c++23 -I "$root/src" -I "$(dirname "${GAMES_CPP:-$r
     -o "$out/engine.js" \
     "$root/src/wasm.cpp" "$root/src/parse.cpp" "$root/src/json.cpp" "$root/src/game.cpp" "$root/src/solver.cpp" \
     "$root/src/simulate.cpp" \
-    "$root/src/village.cpp" "$root/src/effects.cpp" "$root/src/cost.cpp" "${GAMES_CPP:-$root/build/games.gen.cpp}" \
+    "$root/src/village.cpp" "$root/src/effects.cpp" "$root/src/cost.cpp" "${GAMES_CPP:-$root/build/games.gen.cpp}" "${BUILDINGS_CPP:-$root/build/buildings.gen.cpp}" \
     -s MODULARIZE=1 \
     -s EXPORT_NAME=createEngine \
     -s EXPORT_ES6=0 \
