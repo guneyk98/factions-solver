@@ -15,9 +15,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "No build type given, using Release")
 endif()
 
-find_package(Threads REQUIRED)
-find_package(httplib REQUIRED)
-
 set(SITE ${CMAKE_BINARY_DIR}/site)
 file(MAKE_DIRECTORY ${SITE})
 
@@ -72,7 +69,7 @@ add_custom_command(
 )
 
 # The engine: compiled to WebAssembly for the page, and natively for the tools
-# and tests below. The server does not link it.
+# and tests below.
 set(ENGINE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parse.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/json.cpp
@@ -98,9 +95,6 @@ set(ENGINE_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/village.hpp
     ${BUILDINGS_HPP}
 )
-
-add_executable(Server src/server.cpp)
-target_link_libraries(Server PRIVATE httplib::httplib Threads::Threads)
 
 # The api under test, built twice from the same sources.
 #
@@ -220,7 +214,6 @@ else()
 endif()
 
 add_custom_target(Site ALL DEPENDS ${SITE_OUTPUTS})
-add_dependencies(Server Site)
 
 if (MSVC)
     set(WARNINGS /W4 /WX)
@@ -228,7 +221,6 @@ else()
     set(WARNINGS -Wall -Wextra -pedantic -Werror)
 endif()
 
-target_compile_options(Server PRIVATE ${WARNINGS})
 target_compile_options(Harness PRIVATE ${WARNINGS})
 target_compile_options(HarnessChecked PRIVATE ${WARNINGS})
 target_compile_options(Schema PRIVATE ${WARNINGS})

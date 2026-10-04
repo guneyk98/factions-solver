@@ -255,7 +255,7 @@ if [[ -f $root/build/site/engine.js ]] && command -v node >/dev/null \
         exit 1
     fi
 
-    "$root/build/Server" 8123 >/dev/null 2>&1 &
+    python3 -m http.server -d "$root/build/site" 8123 >/dev/null 2>&1 &
     server=$!
     "$chrome" --headless=new --disable-gpu --remote-debugging-port=9223 \
         --user-data-dir="$profile" --window-size=1800,1000 \

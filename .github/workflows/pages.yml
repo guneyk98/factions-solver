@@ -28,13 +28,6 @@ jobs:
 
       - run: npm install -g terser
 
-      # Only Server uses httplib, but CMakeLists requires it at configure time.
-      - name: Install cpp-httplib
-        run: |
-          git clone --depth 1 https://github.com/yhirose/cpp-httplib.git "$RUNNER_TEMP/httplib"
-          cmake -S "$RUNNER_TEMP/httplib" -B "$RUNNER_TEMP/httplib/build" -DHTTPLIB_TEST=OFF
-          sudo cmake --install "$RUNNER_TEMP/httplib/build"
-
       - name: Build site
         env:
           CXX: g++-14
