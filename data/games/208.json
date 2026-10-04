@@ -1,0 +1,1213 @@
+{
+ "buildings": [
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.1,
+     "subtype": "wood",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "wood": 40,
+    "workers": 0.5
+   },
+   "hq": 1,
+   "name": "WOODCUTTER",
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "base": 0.4,
+      "perLevel": true,
+      "subtype": "wood",
+      "type": "production"
+     },
+     {
+      "base": 200,
+      "subtype": "wood",
+      "type": "storage"
+     }
+    ]
+   },
+   "tiers": 1,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 8
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.1,
+     "subtype": "iron",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "wood": 40
+   },
+   "hq": 2,
+   "name": "MINE",
+   "shape": "1x1",
+   "terrainBonus": {
+    "MOUNTAIN": [
+     {
+      "base": 0.4,
+      "perLevel": true,
+      "subtype": "iron",
+      "type": "production"
+     },
+     {
+      "base": 100,
+      "perLevel": true,
+      "subtype": "iron",
+      "type": "storage"
+     }
+    ]
+   },
+   "tiers": 1,
+   "unique": false,
+   "upgradeCost": {
+    "iron": 10,
+    "wood": 40,
+    "workers": 0.5
+   },
+   "upgradeable": true,
+   "workersStart": 8
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 300,
+     "subtype": "wood",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 70,
+    "wood": 200,
+    "workers": 5
+   },
+   "hq": 5,
+   "name": "SAWMILL",
+   "providesAdjacency": [
+    {
+     "multiplier": 1.05,
+     "perLevel": true,
+     "targets": [
+      "WOODCUTTER"
+     ],
+     "type": "production"
+    }
+   ],
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "bonus": 10,
+      "subtype": "wood",
+      "type": "production",
+      "villageWide": true
+     }
+    ],
+    "PLAINS": [
+     {
+      "bonus": 10,
+      "subtype": "wood",
+      "type": "production",
+      "villageWide": true
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 300,
+     "subtype": "iron",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 70,
+    "wood": 200,
+    "workers": 5
+   },
+   "hq": 5,
+   "name": "FURNACE",
+   "providesAdjacency": [
+    {
+     "multiplier": 1.05,
+     "perLevel": true,
+     "targets": [
+      "MINE"
+     ],
+     "type": "production"
+    }
+   ],
+   "shape": "1x1",
+   "terrainBonus": {
+    "MOUNTAIN": [
+     {
+      "base": 500,
+      "subtype": "iron",
+      "type": "storage"
+     }
+    ],
+    "PLAINS": [
+     {
+      "base": 500,
+      "subtype": "iron",
+      "type": "storage"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "adjacencyEffects": [
+    {
+     "base": 400,
+     "perLevel": true,
+     "subtype": "wood",
+     "target": "WOODCUTTER",
+     "type": "storage"
+    },
+    {
+     "base": 400,
+     "perLevel": true,
+     "subtype": "iron",
+     "target": "MINE",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 30,
+    "wood": 100,
+    "workers": 2
+   },
+   "hq": 3,
+   "name": "STORAGE",
+   "shape": "1x1",
+   "tiers": 1,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 3
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.05,
+     "subtype": "soldiers",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "MILITARY"
+   ],
+   "cost": {
+    "iron": 150,
+    "wood": 100,
+    "workers": 8
+   },
+   "hq": 4,
+   "name": "TRAINING_CENTER",
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "multiplier": 1.5,
+      "subtype": "soldiers",
+      "type": "production"
+     }
+    ],
+    "PLAINS": [
+     {
+      "base": 500,
+      "subtype": "soldiers",
+      "type": "storage"
+     }
+    ],
+    "SWAMP": [
+     {
+      "multiplier": 1.5,
+      "subtype": "soldiers",
+      "type": "production"
+     }
+    ]
+   },
+   "tiers": 1,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 3
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.1,
+     "subtype": "workers",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 100,
+    "wood": 150,
+    "workers": 10
+   },
+   "hq": 5,
+   "name": "TAVERN",
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "multiplier": 1.5,
+      "subtype": "workers",
+      "type": "production"
+     }
+    ]
+   },
+   "tiers": 1,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 3
+  },
+  {
+   "acceptModules": true,
+   "adjacencyEffects": [
+    {
+     "base": 100,
+     "perLevel": true,
+     "subtype": "soldiers",
+     "target": "TRAINING_CENTER",
+     "type": "storage"
+    },
+    {
+     "base": 200,
+     "perLevel": true,
+     "subtype": "workers",
+     "target": "TAVERN",
+     "type": "storage"
+    },
+    {
+     "multiplier": 1.2,
+     "subtype": "soldiers",
+     "target": "ARENA",
+     "type": "storage"
+    },
+    {
+     "multiplier": 1.2,
+     "subtype": "workers",
+     "target": "BUILDERS_BUREAU",
+     "type": "storage"
+    },
+    {
+     "multiplier": 1.2,
+     "subtype": "workers",
+     "target": "RESEARCH_CENTER",
+     "type": "storage"
+    }
+   ],
+   "cost": {
+    "iron": 400,
+    "wood": 500,
+    "workers": 8
+   },
+   "hq": 6,
+   "name": "HOUSE",
+   "shape": "1x1",
+   "tiers": 1,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 3
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 750,
+     "subtype": "iron",
+     "type": "storage"
+    },
+    {
+     "base": 750,
+     "subtype": "wood",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 200,
+    "wood": 300,
+    "workers": 10
+   },
+   "hq": 10,
+   "name": "WAREHOUSE",
+   "shape": "1x2",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "base": 500,
+      "perLevel": true,
+      "subtype": "wood",
+      "type": "storage"
+     }
+    ],
+    "MOUNTAIN": [
+     {
+      "base": 500,
+      "perLevel": true,
+      "subtype": "iron",
+      "type": "storage"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 3
+  },
+  {
+   "acceptModules": true,
+   "adjacencyEffects": [
+    {
+     "multiplier": 1.2,
+     "perLevel": false,
+     "subtype": "knight",
+     "targets": [
+      "TRAINING_CENTER",
+      "MERCENARY_OFFICE"
+     ],
+     "type": "production"
+    },
+    {
+     "bonus": 2,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "knightPower",
+     "target": "ARENA",
+     "type": "world"
+    }
+   ],
+   "baseEffects": [
+    {
+     "base": 0.05,
+     "subtype": "knight",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "SUPPORT"
+   ],
+   "cost": {
+    "iron": 1000,
+    "wood": 500,
+    "workers": 5
+   },
+   "hq": 10,
+   "name": "KNIGHT_TRAINING_CENTER",
+   "requires": "B_KNIGHT_TRAINING_CENTER",
+   "shape": "1x1",
+   "terrainBonus": {
+    "MOUNTAIN": [
+     {
+      "bonus": 2,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "knightPower",
+      "type": "world"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "adjacencyEffects": [
+    {
+     "multiplier": 1.2,
+     "perLevel": false,
+     "subtype": "guardian",
+     "targets": [
+      "TRAINING_CENTER",
+      "MERCENARY_OFFICE"
+     ],
+     "type": "production"
+    },
+    {
+     "bonus": 1,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "guardianPower",
+     "target": "ARENA",
+     "type": "world"
+    }
+   ],
+   "baseEffects": [
+    {
+     "base": 0.05,
+     "subtype": "guardian",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "SUPPORT"
+   ],
+   "cost": {
+    "iron": 1000,
+    "wood": 500,
+    "workers": 5
+   },
+   "hq": 10,
+   "name": "GUARDIAN_TRAINING_CENTER",
+   "requires": "B_GUARDIAN_TRAINING_CENTER",
+   "shape": "1x1",
+   "terrainBonus": {
+    "MOUNTAIN": [
+     {
+      "bonus": 2,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "guardianPower",
+      "type": "world"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "adjacencyEffects": [
+    {
+     "bonus": 1,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "attack",
+     "targets": [
+      "TRAINING_CENTER",
+      "MERCENARY_OFFICE"
+     ],
+     "type": "world"
+    },
+    {
+     "bonus": 1,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "defense",
+     "targets": [
+      "TRAINING_CENTER",
+      "MERCENARY_OFFICE"
+     ],
+     "type": "world"
+    }
+   ],
+   "baseEffects": [
+    {
+     "bonus": 1,
+     "subtype": "attack",
+     "type": "world"
+    },
+    {
+     "bonus": 1,
+     "subtype": "defense",
+     "type": "world"
+    }
+   ],
+   "category": [
+    "MILITARY"
+   ],
+   "cost": {
+    "iron": 1400,
+    "wood": 800,
+    "workers": 20
+   },
+   "hq": 10,
+   "name": "GUARD_TOWER",
+   "shape": "1x1",
+   "terrainBonus": {
+    "MOUNTAIN": [
+     {
+      "bonus": 1,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "attack",
+      "type": "world"
+     },
+     {
+      "bonus": 1,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "defense",
+      "type": "world"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "bonus": 10,
+     "subtype": "xp",
+     "type": "points"
+    }
+   ],
+   "category": [
+    "MILITARY",
+    "SUPPORT"
+   ],
+   "cost": {
+    "iron": 6000,
+    "wood": 3600,
+    "workers": 180
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "ARENA",
+   "shape": "2x2",
+   "tiers": 3,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "category": [
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 800,
+    "wood": 1200,
+    "workers": 25
+   },
+   "hq": 10,
+   "name": "GUILD_HALL",
+   "providesAdjacency": [
+    {
+     "multiplier": 1.05,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "workers",
+     "targets": [
+      "TAVERN",
+      "MERCENARY_OFFICE"
+     ],
+     "type": "production"
+    },
+    {
+     "multiplier": 1.2,
+     "ramp_ticks": 100,
+     "targets": [
+      "HOUSE"
+     ],
+     "type": "storage"
+    }
+   ],
+   "shape": "1x2",
+   "tiers": 3,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 600,
+    "wood": 1000,
+    "workers": 15
+   },
+   "hq": 10,
+   "maxCount": 3,
+   "name": "TOWN_HALL",
+   "providesAdjacency": [
+    {
+     "categories": [
+      "ECONOMY"
+     ],
+     "multiplier": 1.01,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "type": "efficiency"
+    }
+   ],
+   "shape": "1x2",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "multiplier": 1.01,
+      "perLevel": true,
+      "subtype": "wood",
+      "type": "production",
+      "villageWide": true
+     },
+     {
+      "multiplier": 1.01,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "wood",
+      "type": "storage",
+      "villageWide": true
+     }
+    ],
+    "MOUNTAIN": [
+     {
+      "multiplier": 1.01,
+      "perLevel": true,
+      "subtype": "iron",
+      "type": "production",
+      "villageWide": true
+     },
+     {
+      "multiplier": 1.01,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "iron",
+      "type": "storage",
+      "villageWide": true
+     }
+    ]
+   },
+   "tiers": 3,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.05,
+     "subtype": "soldiers",
+     "type": "production"
+    },
+    {
+     "base": 0.1,
+     "subtype": "workers",
+     "type": "production"
+    }
+   ],
+   "category": [
+    "MILITARY",
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 175,
+    "wood": 175,
+    "workers": 12
+   },
+   "hq": 10,
+   "name": "MERCENARY_OFFICE",
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "multiplier": 1.5,
+      "subtype": "workers",
+      "type": "production"
+     }
+    ],
+    "MOUNTAIN": [
+     {
+      "multiplier": 1.5,
+      "subtype": "soldiers",
+      "type": "production"
+     }
+    ]
+   },
+   "tiers": 4,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 500,
+     "subtype": "soldiers",
+     "type": "storage"
+    },
+    {
+     "base": 1000,
+     "subtype": "workers",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "MILITARY",
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 500,
+    "wood": 500,
+    "workers": 20
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "GARRISON_HALL",
+   "shape": "1x1",
+   "tiers": 4,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": false,
+   "adjacencyEffects": [
+    {
+     "base": -1,
+     "perLevel": true,
+     "ramp_ticks": 100,
+     "subtype": "market_tax",
+     "target": "TOWN_HALL",
+     "type": "buildings"
+    }
+   ],
+   "baseEffects": [
+    {
+     "base": -1,
+     "subtype": "market_tax",
+     "type": "buildings"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 2000,
+    "wood": 2000,
+    "workers": 50
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "MARKET",
+   "requires": "B_MARKET",
+   "shape": "2x2",
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "multiplier": 1.16,
+     "subtype": "market_order",
+     "type": "production"
+    },
+    {
+     "base": 1,
+     "subtype": "market_order",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 800,
+    "wood": 800,
+    "workers": 30
+   },
+   "hq": 10,
+   "name": "SHIPYARD",
+   "requiresAdjacentTerrain": [
+    "SEA"
+   ],
+   "shape": "1x1",
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": false,
+   "baseEffects": [
+    {
+     "bonus": 60,
+     "subtype": "recycling",
+     "type": "buildings"
+    }
+   ],
+   "category": [
+    "ECONOMY"
+   ],
+   "cost": {
+    "iron": 6000,
+    "wood": 6000,
+    "workers": 400
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "RECYCLING_WORKSHOP",
+   "shape": "L",
+   "tiers": 4,
+   "unique": false,
+   "upgradeable": false,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "category": [
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 150,
+    "wood": 300,
+    "workers": 8
+   },
+   "hq": 8,
+   "name": "RESEARCH_CENTER",
+   "shape": "1x2",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "bonus": 2,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "worker_project_efficiency",
+      "type": "world"
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.5,
+     "subtype": "build_order",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "WORKER"
+   ],
+   "cost": {
+    "iron": 200,
+    "wood": 350,
+    "workers": 10
+   },
+   "hq": 8,
+   "name": "BUILDERS_BUREAU",
+   "shape": "1x1",
+   "terrainBonus": {
+    "FOREST": [
+     {
+      "bonus": 3,
+      "perLevel": true,
+      "ramp_ticks": 100,
+      "subtype": "map_efficiency",
+      "type": "world"
+     },
+     {
+      "multiplier": 1.05,
+      "perLevel": true,
+      "subtype": "build_order",
+      "type": "production",
+      "villageWide": true
+     }
+    ]
+   },
+   "tiers": 2,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": false,
+   "category": [
+    "SUPPORT"
+   ],
+   "cost": {
+    "iron": 5000,
+    "wood": 5000,
+    "workers": 300
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "ACADEMY",
+   "requires": "B_ACADEMY",
+   "shape": "2x2",
+   "tiers": 4,
+   "unique": false,
+   "upgradeable": false,
+   "workersStart": 1
+  },
+  {
+   "acceptModules": true,
+   "baseEffects": [
+    {
+     "base": 0.25,
+     "subtype": "attack_order",
+     "type": "production"
+    },
+    {
+     "base": 5,
+     "subtype": "attack_order",
+     "type": "storage"
+    }
+   ],
+   "category": [
+    "MILITARY"
+   ],
+   "cost": {
+    "iron": 1200,
+    "wood": 1000,
+    "workers": 20
+   },
+   "hq": 10,
+   "maxCount": 1,
+   "name": "WAR_CAMP",
+   "shape": "1x1",
+   "tiers": 3,
+   "unique": false,
+   "upgradeable": true,
+   "workersStart": 1
+  }
+ ],
+ "cost": {
+  "building": {
+   "iron": 0.9120061870099293,
+   "wood": 1.2057600944173041,
+   "workers": 1.0572498120528073
+  },
+  "village": {
+   "iron": 0.9501499757945221,
+   "wood": 0.9240161110751179,
+   "workers": 1.0515510586605123
+  },
+  "villageBase": {
+   "iron": 50,
+   "wood": 50,
+   "workers": 2
+  },
+  "villageWorkersStart": 10
+ },
+ "height": 10,
+ "homeBonusMultiplier": 1,
+ "id": 208,
+ "map": "RIVERS",
+ "marketTax": 50.0,
+ "resourceMultiplier": 1,
+ "seasonNow": 4,
+ "seasons": [
+  {
+   "end": "2026-10-03T18:00:00+00:00",
+   "start": "2026-10-03T12:00:00+00:00",
+   "type": "FALL"
+  },
+  {
+   "end": "2026-10-04T00:00:00+00:00",
+   "start": "2026-10-03T18:00:00+00:00",
+   "type": "SUMMER"
+  },
+  {
+   "end": "2026-10-04T06:00:00+00:00",
+   "start": "2026-10-04T00:00:00+00:00",
+   "type": "SPRING"
+  },
+  {
+   "end": "2026-10-04T12:00:00+00:00",
+   "start": "2026-10-04T06:00:00+00:00",
+   "type": "WINTER"
+  },
+  {
+   "end": "2026-10-04T18:00:00+00:00",
+   "start": "2026-10-04T12:00:00+00:00",
+   "type": "FALL"
+  },
+  {
+   "end": "2026-10-05T00:00:00+00:00",
+   "start": "2026-10-04T18:00:00+00:00",
+   "type": "SUMMER"
+  },
+  {
+   "end": "2026-10-05T06:00:00+00:00",
+   "start": "2026-10-05T00:00:00+00:00",
+   "type": "SPRING"
+  },
+  {
+   "end": "2026-10-05T12:00:00+00:00",
+   "start": "2026-10-05T06:00:00+00:00",
+   "type": "WINTER"
+  }
+ ],
+ "status": "PLAYING",
+ "storageMultiplier": 1,
+ "terrain": [
+  [
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "SEA",
+   "PLAINS",
+   "PLAINS"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "PLAINS",
+   "HIGH_MOUNTAIN",
+   "SWAMP",
+   "SWAMP",
+   "SWAMP",
+   "MOUNTAIN"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "SWAMP",
+   "SWAMP",
+   "MOUNTAIN",
+   "MOUNTAIN"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "SEA",
+   "HIGH_MOUNTAIN",
+   "FOREST",
+   "FOREST",
+   "MOUNTAIN",
+   "MOUNTAIN"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "SWAMP",
+   "MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "PLAINS",
+   "FOREST",
+   "FOREST",
+   "PLAINS"
+  ],
+  [
+   "SEA",
+   "SEA",
+   "SEA",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "HIGH_MOUNTAIN",
+   "FOREST",
+   "FOREST",
+   "FOREST",
+   "FOREST"
+  ],
+  [
+   "PLAINS",
+   "SEA",
+   "PLAINS",
+   "SEA",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "FOREST",
+   "SEA"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "SEA",
+   "SEA",
+   "SEA",
+   "SEA"
+  ],
+  [
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "MOUNTAIN",
+   "FOREST",
+   "FOREST",
+   "SEA",
+   "SEA",
+   "SEA",
+   "SEA"
+  ],
+  [
+   "MOUNTAIN",
+   "PLAINS",
+   "PLAINS",
+   "PLAINS",
+   "FOREST",
+   "FOREST",
+   "SEA",
+   "SEA",
+   "PLAINS",
+   "PLAINS"
+  ]
+ ],
+ "type": "PVP",
+ "width": 10
+}

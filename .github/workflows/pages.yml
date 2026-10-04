@@ -1,0 +1,59 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lukka/get-cmake@latest
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.1
+
+      - run: npm install -g terser
+
+      # Only Server uses httplib, but CMakeLists requires it at configure time.
+      - name: Install cpp-httplib
+        run: |
+          git clone --depth 1 https://github.com/yhirose/cpp-httplib.git "$RUNNER_TEMP/httplib"
+          cmake -S "$RUNNER_TEMP/httplib" -B "$RUNNER_TEMP/httplib/build" -DHTTPLIB_TEST=OFF
+          sudo cmake --install "$RUNNER_TEMP/httplib/build"
+
+      - name: Build site
+        env:
+          CXX: g++-14
+        run: |
+          cmake -S . -B build -G Ninja
+          cmake --build build --target Site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

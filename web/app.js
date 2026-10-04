@@ -2004,7 +2004,7 @@ async function search(body, goal) {
   }
 
   const wanted = howManyWorkers(restarts);
-  while (searchers.length < wanted) searchers.push(new Worker('/engine-worker.js'));
+  while (searchers.length < wanted) searchers.push(new Worker('engine-worker.js'));
 
   const id = ++searchTicket;
 
@@ -2528,7 +2528,7 @@ let villagesAsked = null;
 async function villagesFor(id) {
   if (villagesByGame.has(id)) return villagesByGame.get(id);
 
-  const res = await fetch(`/players/${id}.json`);
+  const res = await fetch(`players/${id}.json`);
   // A round still being played has no villages recorded, since they change
   // hourly (see tools/fetch-games.py). That is an outcome, not an error.
   if (res.status === 404) {
@@ -2580,12 +2580,37 @@ playerSelect.addEventListener('focus', fillPlayers);
    the game map for a warehouse at (0, 2) rotation 3, which occupies (0, 2) and
    (0, 3).
 
-   Square is invariant under rotation, and LShape has four distinct
-   orientations matching the engine's four, so both use the count directly. */
+   Square is invariant under rotation and uses the count directly. An LShape
+   turns the other way round from the engine's orientations: rotation 0, 1, 2,
+   3 is east, north, west, south. That is the only reading of the four under
+   which none of the 40 L buildings standing in rounds 168 and 187 falls
+   outside the grid or onto a neighbour, and it matches the recycling workshop
+   of player 12264 in game 187, at (8, 0) rotation 3, which covers (8, 0),
+   (9, 0) and (9, 1). */
 function orientationOf(key, rotation) {
   const turns = (((rotation || 0) % 4) + 4) % 4;
   if (shapeOf(key) === 'line') return turns % 2 === 0 ? EAST : SOUTH;
+  if (shapeOf(key) === 'l') return SCHEMA.orientations[(4 - turns) % 4];
   return SCHEMA.orientations[turns];
+}
+
+/* The engine anchors an LShape at its corner tile, the one adjacent to both
+   arms, which is the bounding-box corner the api gives only when the arms run
+   east and south. The other three orientations put the corner tile elsewhere
+   in the box, so the anchor moves by this much. Single, Line and Square are
+   anchored at the box corner in both, so they do not move. */
+const L_ANCHOR_OFFSET = {
+  [EAST]: [0, 0],
+  [SOUTH]: [1, 0],
+  [WEST]: [1, 1],
+  [NORTH]: [0, 1],
+};
+
+// Where the api's position for a building puts the engine's anchor.
+function anchorOf(key, orientation, x, y) {
+  if (shapeOf(key) !== 'l') return [x, y];
+  const [dx, dy] = L_ANCHOR_OFFSET[orientation] ?? [0, 0];
+  return [x + dx, y + dy];
 }
 
 function usePlayer(one) {
@@ -2602,16 +2627,17 @@ function usePlayer(one) {
 
   let refused = 0;
   for (const b of one.buildings) {
-    const at = index(b.x, b.y);
-    if (!Number.isInteger(at) || at < 0 || at >= TILE_COUNT || !BUILDING_BY_KEY.has(b.name)) {
+    const orientation = orientationOf(b.name, b.rotation);
+    const [x, y] = anchorOf(b.name, orientation, b.x, b.y);
+    const at = cellAt(x, y);
+    if (at === null || !BUILDING_BY_KEY.has(b.name)) {
       refused += 1;
       continue;
     }
     // An unrecognised seal is dropped, as is one on a building that cannot
     // take it (see setBuilding).
     const seal = SEAL_BY_KEY.has(b.seal) ? b.seal : NO_SEAL;
-    setBuilding(at, b.name, clampBuildingLevel(b.level, b.name),
-      orientationOf(b.name, b.rotation), seal);
+    setBuilding(at, b.name, clampBuildingLevel(b.level, b.name), orientation, seal);
   }
 
   setVillageLevel(one.level);

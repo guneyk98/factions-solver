@@ -1,0 +1,22 @@
+[
+ {
+  "id": 208,
+  "map": "RIVERS",
+  "type": "PVP"
+ },
+ {
+  "id": 200,
+  "map": "FORGOTTEN_WEALD",
+  "type": "PVP"
+ },
+ {
+  "id": 187,
+  "map": "ALPINE",
+  "type": "PVP"
+ },
+ {
+  "id": 168,
+  "map": "FORGOTTEN_WEALD",
+  "type": "PVP"
+ }
+]

@@ -22,8 +22,18 @@ const buildings = new Map(SCHEMA.buildings.map((one) => [one.id, one]));
 const shapes = new Map(SCHEMA.games.find((one) => one.id === 168).shapes.map((one) => [one.building, one.shape]));
 const orientation = (building, rotation) => {
     const turns = ((rotation ?? 0) % 4 + 4) % 4;
-    return shapes.get(building.id) === 'line' ? (turns % 2 === 0 ? 'e' : 's') : SCHEMA.orientations[turns];
+    const shape = shapes.get(building.id);
+    if (shape === 'line') return turns % 2 === 0 ? 'e' : 's';
+    // An LShape turns the other way round from the engine's orientations.
+    // Mirrors orientationOf in web/app.js.
+    return SCHEMA.orientations[shape === 'l' ? (4 - turns) % 4 : turns];
 };
+// The api anchors a building at its bounding-box corner; the engine anchors an
+// LShape at its corner tile. Mirrors anchorOf in web/app.js.
+const L_ANCHOR = { e: [0, 0], s: [1, 0], w: [1, 1], n: [0, 1] };
+const anchor = (building, facing, x, y) => (
+    shapes.get(building.id) === 'l' ? [x + L_ANCHOR[facing][0], y + L_ANCHOR[facing][1]] : [x, y]
+);
 
 const tiles = Array.from({ length: SCHEMA.width * SCHEMA.height }, (_, i) => `${player.terrain[i]}:NONE:0`);
 tiles[player.hqY * SCHEMA.width + player.hqX] = `${player.terrain[player.hqY * SCHEMA.width + player.hqX]}:VILLAGE_CENTRE:${player.level}`;
@@ -32,10 +42,13 @@ for (const one of player.buildings) {
     const building = buildings.get(one.name);
     if (building === undefined) throw new Error(`unknown building ${one.name}`);
 
-    let token = `${player.terrain[one.y * SCHEMA.width + one.x]}:${one.name}:${one.level}`;
-    if (shapes.get(one.name) !== 'single') token += `:${orientation(building, one.rotation)}`;
+    const facing = orientation(building, one.rotation);
+    const [x, y] = anchor(building, facing, one.x, one.y);
+    const at = y * SCHEMA.width + x;
+    let token = `${player.terrain[at]}:${one.name}:${one.level}`;
+    if (shapes.get(one.name) !== 'single') token += `:${facing}`;
     if (one.seal !== 'NONE') token += `:${one.seal}`;
-    tiles[one.y * SCHEMA.width + one.x] = token;
+    tiles[at] = token;
 }
 
 const body = `${player.level} ${tiles.join(' ')} game=168`;

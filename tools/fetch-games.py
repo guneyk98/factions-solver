@@ -42,7 +42,7 @@ import urllib.error
 import urllib.request
 
 API = 'https://api.factions-online.com/api'
-EARLIEST = 48
+EARLIEST = 168
 # event_type values that denote a season. Each season, the first included, multiplies every
 # building and village cost multiplier by 0.99, so which season a round is in
 # decides what anything costs to upgrade.
