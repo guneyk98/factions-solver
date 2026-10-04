@@ -47,6 +47,51 @@ const RANKINGS = [
   },
 ];
 
+/* The figures in the stats panel, grouped under its headings. `id` is the
+   panel element's id, `read` takes it from an engine reply, and `lower` marks
+   a figure where less is better. */
+const HEAT_STATS = [
+  ...RESOURCES.map((r) => ({
+    group: r.name,
+    stats: [
+      { id: `total-${r.key}`, name: `${r.name}/t`, read: (o) => o.production[r.key] },
+      { id: `store-${r.key}`, name: `${r.name} cap`, read: (o) => o.storage[r.key] },
+      ...MARKET_GOALS.filter((m) => m.base === `${r.key}.production`)
+        .map((m) => ({ id: `market-${r.key}`, name: m.name, read: (o) => o.market[r.key] })),
+      ...(r.key === 'workers' ? WORKER_EFFICIENCIES.map((e) => ({
+        id: `effective-workers-${e.key}`,
+        name: WORKER_MODES.find((m) => m.key === e.key).name,
+        read: (o) => o.effective.workers[e.key],
+      })) : []),
+      ...(r.key === 'soldiers' ? SOLDIER_EFFICIENCIES.map((e) => ({
+        id: `effective-soldiers-${e.key}`,
+        name: SOLDIER_MODES.find((m) => m.key === e.key).name,
+        read: (o) => o.effective.soldiers[e.key],
+      })) : []),
+    ],
+  })),
+  {
+    group: 'Support',
+    stats: [
+      ...UNITS.map((u) => ({ id: `power-${u.key}`, name: `${u.one} power`, read: (o) => o.power[u.key] })),
+      ...UNITS.map((u) => ({ id: `units-${u.key}`, name: `${u.name}/t`, read: (o) => o.units[u.key] })),
+    ],
+  },
+  {
+    group: 'Village',
+    stats: [
+      { id: 'market-tax', name: 'Market tax (lower)', read: (o) => o.market.tax, lower: true, percent: true },
+      ...EFFICIENCIES.map((e) => ({ id: `efficiency-${e.key}`, name: `${e.name} efficiency`, read: (o) => o.efficiency[e.key], percent: true })),
+    ],
+  },
+];
+
+const HEAT_STAT_BY_ID = new Map(HEAT_STATS.flatMap((g) => g.stats).map((one) => [one.id, one]));
+
+// What the next level's price is counted in: one resource, or a weighted sum.
+const HEAT_COSTS = [...COSTED.map((key) => ({ key, name: RESOURCES.find((r) => r.key === key).name })),
+  { key: 'weighted', name: 'Weighted' }];
+
 const state = {
   game: GAMES[0].id,
   // The season index to cost against, or null to follow the clock. Setting it
@@ -91,9 +136,15 @@ const state = {
   minimums: Object.fromEntries(OBJECTIVES.map((o) => [o.id, 0])),
   // One must stay on.
   used: Object.fromEntries(OBJECTIVES.map((o) => [o.id, true])),
+  heat: { stat: 'total-wood', cost: 'wood', weights: { wood: 1, iron: 1, workers: 1 } },
+  /* Per building on the board, what raising it one level adds to the heat
+     stat: { anchor, gain, next }, or null until computed. */
+  upgrades: null,
 };
 
 let drag = null;
+// anchor -> { rank, share }, share being per 1000 over the largest, in [0, 1]
+let heatRanks = new Map();
 let painting = false;
 let saveTimer = null;
 
@@ -233,6 +284,7 @@ const sealPickerEl = document.getElementById('insp-seals');
 const sealNoteEl = document.getElementById('seal-note');
 const placeView = document.getElementById('place-view');
 const solveView = document.getElementById('solve-view');
+const heatView = document.getElementById('heat-view');
 const viewHelp = document.getElementById('view-help');
 const undoButton = document.getElementById('undo');
 const redoButton = document.getElementById('redo');
@@ -376,7 +428,8 @@ function renderGrid() {
       : '';
 
     const ghostFrame = dragging && ghosting;
-    const framed = terrainMode ? null : (ghostFrame ? preview.key : (isAnchor ? tile.building : null));
+    // The heatmap colours every tile of a building, which the slot frame would cover.
+    const framed = terrainMode || state.panel === 'heat' ? null : (ghostFrame ? preview.key : (isAnchor ? tile.building : null));
     view.frame.classList.toggle('ghost', ghostFrame);
     view.frame.classList.toggle('ghost-bad', ghostFrame && !preview.ok);
 
@@ -394,8 +447,18 @@ function renderGrid() {
       view.seal.hidden = true;
     }
 
+    const heat = state.panel === 'heat' && anchor !== null ? heatRanks.get(anchor) : undefined;
+    const heatView = state.panel === 'heat';
+    el.classList.toggle('heat', heat !== undefined);
+    el.classList.toggle('heat-none', heatView && anchor !== null && heat === undefined);
+    el.classList.toggle('heat-empty', heatView && anchor === null);
+    if (heat !== undefined) el.style.setProperty('--heat', `${Math.round(heat.share * 100)}%`);
+    else el.style.removeProperty('--heat');
+
     const badges = [];
-    if (state.showOutput && tiles && !terrainMode) {
+    if (heat !== undefined) {
+      if (isAnchor) badges.push(`<span class="heat-badge">#${heat.rank}</span>`);
+    } else if (state.panel !== 'heat' && state.showOutput && tiles && !terrainMode) {
       for (const { key, cls } of RESOURCES) {
         if (tiles.production[key][i] > 0) badges.push(`<span class="${cls}">${fmt(tiles.production[key][i])}</span>`);
       }
@@ -866,15 +929,19 @@ terrainToggle.addEventListener('click', () => {
 /* --------------------------- views and help --------------------------- */
 
 function showView(name) {
-  state.panel = name === 'solve' ? 'solve' : 'place';
+  state.panel = ['solve', 'heat'].includes(name) ? name : 'place';
   placeView.hidden = state.panel !== 'place';
   solveView.hidden = state.panel !== 'solve';
+  heatView.hidden = state.panel !== 'heat';
 
   document.querySelectorAll('.view-tab').forEach((btn) => {
     btn.setAttribute('aria-pressed', btn.dataset.view === state.panel ? 'true' : 'false');
   });
 
-  if (state.panel === 'solve' && state.mode === 'terrain') setMode('build');
+  if (state.panel !== 'place' && state.mode === 'terrain') setMode('build');
+  computeUpgrades();
+  renderHeat();
+  renderGrid();
   // The palette can only be measured while it is displayed.
   if (state.panel === 'place') sizePalette();
   renderHelp();
@@ -891,9 +958,206 @@ const PLACING_HELP = 'Click to place, drag to move, right-click to remove. '
 const SEARCH_HELP = 'Rearranges the buildings and seals you have. Nothing is built, removed '
   + 'or levelled. Undo/redo steps between before and after.';
 
+const HEAT_HELP = 'Each building coloured by what its next level adds to the stat, per 1000 of the cost. '
+  + 'Brighter is more for less.';
+
 function renderHelp() {
-  viewHelp.title = state.panel === 'solve' ? SEARCH_HELP : PLACING_HELP;
+  viewHelp.title = { solve: SEARCH_HELP, heat: HEAT_HELP }[state.panel] ?? PLACING_HELP;
 }
+
+/* ------------------------------ upgrade heatmap ------------------------------ */
+
+const heatStatSelect = document.getElementById('heat-stat');
+const heatCostChoice = document.getElementById('heat-cost');
+const heatWeights = document.getElementById('heat-weights');
+const heatList = document.getElementById('heat-list');
+const heatNote = document.getElementById('heat-note');
+
+// Relative to the stat's size, below which a change is floating-point rounding.
+const HEAT_EPSILON = 1e-9;
+
+/* Raises each building one level in turn and asks the engine what the stat
+   comes to. Only while the view is open: it is one engine call per building. */
+function computeUpgrades() {
+  state.upgrades = null;
+  if (state.panel !== 'heat' || engine === null || state.result === null) return;
+
+  const { read, lower } = HEAT_STAT_BY_ID.get(state.heat.stat);
+  const before = read(state.result);
+  const board = { tiles: state.tiles, result: state.result };
+  const upgrades = [];
+
+  for (let i = 0; i < TILE_COUNT; i += 1) {
+    const tile = state.tiles[i];
+    if (tile.building === EMPTY) continue;
+    const cost = costAt(board, i);
+    if (cost === null || !anyCost(cost.next)) continue;
+
+    const centre = tile.building === CENTRE;
+    const { level } = tile;
+    tile.level += 1;
+    if (centre) state.villageLevel += 1;
+    let after = null;
+    try {
+      after = read(JSON.parse(engine.production(serialize())));
+    } catch {
+      // a level the engine refuses is left off the map
+    } finally {
+      tile.level = level;
+      if (centre) state.villageLevel -= 1;
+    }
+    if (after === null) continue;
+
+    const change = (lower ? before - after : after - before);
+    const gain = Math.abs(change) <= HEAT_EPSILON * Math.max(1, Math.abs(before)) ? 0 : change;
+    upgrades.push({ anchor: i, building: tile.building, level, gain, next: cost.next });
+  }
+  state.upgrades = upgrades;
+}
+
+function upgradePrice(next) {
+  const { cost, weights } = state.heat;
+  return cost === 'weighted'
+    ? COSTED.reduce((sum, r) => sum + weights[r] * next[r], 0)
+    : next[cost];
+}
+
+// Positive gains only, best first. A gain at no price ranks above any other.
+function rankedUpgrades() {
+  return (state.upgrades ?? [])
+    .filter((one) => one.gain > 0)
+    .map((one) => {
+      const price = upgradePrice(one.next);
+      return { ...one, price, per: price > 0 ? (one.gain / price) * 1000 : Infinity };
+    })
+    .sort((a, b) => b.per - a.per);
+}
+
+function significant(value) {
+  return String(Number(value.toPrecision(3)));
+}
+
+function heatFigure(value, percent) {
+  return percent ? `${significant(value * 100)}%` : significant(value);
+}
+
+function buildHeatControls() {
+  for (const { group, stats } of HEAT_STATS) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group;
+    for (const one of stats) addOption(optgroup, one.id, one.name);
+    heatStatSelect.append(optgroup);
+  }
+
+  for (const { key, name } of HEAT_COSTS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.cost = key;
+    button.textContent = name;
+    heatCostChoice.append(button);
+  }
+
+  for (const key of COSTED) {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '0.1';
+    input.dataset.weight = key;
+    label.append(span(`${key}-value`, RESOURCES.find((r) => r.key === key).name), input);
+    heatWeights.append(label);
+  }
+}
+
+function renderHeatControls() {
+  heatStatSelect.value = state.heat.stat;
+  heatCostChoice.querySelectorAll('[data-cost]').forEach((button) => {
+    button.setAttribute('aria-pressed', button.dataset.cost === state.heat.cost ? 'true' : 'false');
+  });
+  heatWeights.hidden = state.heat.cost !== 'weighted';
+  heatWeights.querySelectorAll('[data-weight]').forEach((input) => {
+    if (document.activeElement !== input) input.value = String(state.heat.weights[input.dataset.weight]);
+  });
+}
+
+function renderHeat() {
+  heatRanks = new Map();
+  if (state.panel !== 'heat') return;
+
+  if (state.upgrades === null) {
+    heatList.innerHTML = '';
+    heatNote.textContent = state.result === null ? 'Nothing computed for this village.' : '';
+    return;
+  }
+
+  const { percent, lower } = HEAT_STAT_BY_ID.get(state.heat.stat);
+  const ranked = rankedUpgrades();
+  const largest = Math.max(0, ...ranked.map((one) => one.per).filter(Number.isFinite));
+
+  ranked.forEach((one, k) => {
+    const share = !Number.isFinite(one.per) || largest === 0 ? 1 : one.per / largest;
+    heatRanks.set(one.anchor, { rank: k + 1, share });
+  });
+
+  const head = '<li class="heat-head"><span class="heat-rank"></span><span class="heat-name">Building</span>'
+    + '<span class="heat-per" title="Gain per 1000 of the cost">per 1k</span></li>';
+  heatList.innerHTML = ranked.length === 0 ? '' : head + ranked.map((one, k) => {
+    const name = BUILDING_BY_KEY.get(one.building).name;
+    const price = COSTED.filter((r) => one.next[r] > 0)
+      .map((r) => `<span class="${r}-value">${fmtStoreShort(one.next[r])}</span>`).join(' ');
+    return `<li><button type="button" data-anchor="${one.anchor}">`
+      + `<span class="heat-rank">${k + 1}</span>`
+      + `<span class="heat-name">${name} ${one.level}\u2192${one.level + 1}</span>`
+      + `<span class="heat-per">${Number.isFinite(one.per) ? heatFigure(one.per, percent) : 'free'}</span>`
+      + `<span class="heat-sub">${lower ? '\u2212' : '+'}${heatFigure(one.gain, percent)} for ${price}</span>`
+      + '</button></li>';
+  }).join('');
+
+  const left = state.upgrades.length - ranked.length;
+  heatNote.textContent = [
+    ranked.length === 0 ? 'No upgrade raises this stat.' : '',
+    left > 0 ? `${plural(left, 'other building')}: no gain.` : '',
+  ].filter(Boolean).join(' ');
+}
+
+function heatChanged(recount) {
+  if (recount) computeUpgrades();
+  renderHeatControls();
+  renderHeat();
+  renderGrid();
+  saveSoon();
+}
+
+buildHeatControls();
+renderHeatControls();
+
+heatStatSelect.addEventListener('change', () => {
+  if (!HEAT_STAT_BY_ID.has(heatStatSelect.value)) return;
+  state.heat.stat = heatStatSelect.value;
+  heatChanged(true);
+});
+
+heatCostChoice.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-cost]');
+  if (button === null) return;
+  state.heat.cost = button.dataset.cost;
+  heatChanged(false);
+});
+
+heatWeights.addEventListener('input', (event) => {
+  const key = event.target.dataset.weight;
+  const value = Number(event.target.value);
+  if (key === undefined || !Number.isFinite(value) || value < 0) return;
+  state.heat.weights[key] = value;
+  heatChanged(false);
+});
+
+heatList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-anchor]');
+  if (button === null) return;
+  state.selected = Number(button.dataset.anchor);
+  render();
+});
 
 /* ------------------------------ editing ------------------------------ */
 
@@ -1407,6 +1671,8 @@ function recompute() {
 
 function saveAndRender() {
   saveSoon();
+  computeUpgrades();
+  renderHeat();
   renderStatsPanel(state.result, state.modifiers);
   renderGrid();
   renderInspector();
@@ -2283,6 +2549,7 @@ function controls() {
     targets: { ...state.targets },
     minimums: { ...state.minimums },
     used: { ...state.used },
+    heat: { ...state.heat, weights: { ...state.heat.weights } },
     shareModifiers: shareModifiers.checked,
     modifiersOpen: modifiersPanel.open,
   };
@@ -2318,7 +2585,7 @@ function restoreFromStorage() {
   state.season = Number.isInteger(view.season) && view.season >= 0 && view.season < seasonsOf(state.game).length
     ? view.season
     : null;
-  if (view.panel === 'place' || view.panel === 'solve') state.panel = view.panel;
+  if (['place', 'solve', 'heat'].includes(view.panel)) state.panel = view.panel;
   if (view.mode === 'build' || view.mode === 'terrain') state.mode = view.mode;
   if (TIERS.includes(view.tier)) state.buildTier = view.tier;
   if (view.tool === null || PLACEABLE.some((b) => b.key === view.tool)) state.buildTool = view.tool;
@@ -2359,6 +2626,13 @@ function restoreFromStorage() {
       if (Number.isFinite(value) && value >= 0) held[id] = value;
     }
     if (typeof view.used?.[id] === 'boolean') state.used[id] = view.used[id];
+  }
+
+  if (HEAT_STAT_BY_ID.has(view.heat?.stat)) state.heat.stat = view.heat.stat;
+  if (HEAT_COSTS.some((one) => one.key === view.heat?.cost)) state.heat.cost = view.heat.cost;
+  for (const key of COSTED) {
+    const value = view.heat?.weights?.[key];
+    if (Number.isFinite(value) && value >= 0) state.heat.weights[key] = value;
   }
 
   // No search can run with every goal off.

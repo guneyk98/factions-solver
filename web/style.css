@@ -55,7 +55,8 @@
 #place-view,
 #build-view,
 #start-view:not([hidden]),
-#solve-view:not([hidden]) {
+#solve-view:not([hidden]),
+#heat-view:not([hidden]) {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -183,6 +184,7 @@ h2 {
 .palette-grid,
 .stats,
 #solve-view,
+#heat-view,
 .saves-list {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -2663,4 +2665,161 @@ details.panel summary h2 {
   border-left: 2px solid color-mix(in srgb, var(--line) 80%, transparent);
   background: none;
   font-weight: 400;
+}
+
+/* ---------- upgrade heatmap ----------
+
+   One hue from dark to the accent: --heat is the building's gain per cost as a
+   percentage of the best on the board. Buildings whose next level adds
+   nothing are grey, and bare ground is dimmed. */
+
+:root {
+  --heat-low: #4a3512;
+  --heat-none: #34302a;
+}
+
+#heat-view {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.heat-weights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+
+.heat-weights label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.heat-weights input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+}
+
+.heat-weights input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.heat-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.heat-ramp {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, var(--heat-low), var(--accent));
+}
+
+.heat-list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 11.5px;
+}
+
+.heat-list li {
+  margin-bottom: 3px;
+}
+
+.heat-list button,
+.heat-head {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  column-gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.heat-head {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.heat-rank {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heat-per {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-head .heat-per {
+  font-weight: 400;
+}
+
+.heat-sub {
+  grid-column: 2 / 4;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Under the building art (z-index 1), over the terrain. */
+.tile.heat::after,
+.tile.heat-none::after,
+.tile.heat-empty::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tile.heat::after {
+  background: color-mix(in oklab, var(--accent) var(--heat, 0%), var(--heat-low));
+  opacity: 0.9;
+}
+
+.tile.heat-none::after {
+  background: var(--heat-none);
+  opacity: 0.9;
+}
+
+.tile.heat-none .art {
+  opacity: 0.4;
+}
+
+.tile.heat-empty::after {
+  background: var(--bg);
+  opacity: 0.6;
+}
+
+.tile.heat .yield,
+.tile.heat .level,
+.tile.heat-none .level {
+  z-index: 2;
+}
+
+.tile .heat-badge {
+  font-size: 11px;
+  color: #fff;
 }

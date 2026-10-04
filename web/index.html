@@ -65,6 +65,7 @@
       <div class="view-tabs">
         <button type="button" class="view-tab" id="view-place" data-view="place" aria-pressed="true">Place</button>
         <button type="button" class="view-tab" id="view-solve" data-view="solve" aria-pressed="false">Rearrange</button>
+        <button type="button" class="view-tab" id="view-heat" data-view="heat" aria-pressed="false">Upgrade</button>
         <span class="help" id="view-help" title="">?</span>
       </div>
 
@@ -111,6 +112,23 @@
           debug report</button>
         <textarea id="solve-debug-text" class="solve-debug-text" rows="4" readonly spellcheck="false"
           hidden></textarea>
+      </section>
+
+      <section id="heat-view" hidden>
+        <label class="goal-reading">
+          <span>Maximise</span>
+          <select id="heat-stat"></select>
+        </label>
+        <div class="goal-reading">
+          <span>Cost in</span>
+          <div class="choice unit-choice" id="heat-cost"></div>
+        </div>
+        <div class="heat-weights" id="heat-weights" hidden></div>
+        <div class="heat-scale" aria-hidden="true">
+          <span>less</span><span class="heat-ramp"></span><span>more</span>
+        </div>
+        <ol class="heat-list" id="heat-list"></ol>
+        <p class="hint" id="heat-note"></p>
       </section>
     </aside>
 
