@@ -402,7 +402,7 @@ def fetch_players(token, only):
         # village-wide source from one the page computes off the board.
         on_grid = {b['name'] for b in written(gid).get('buildings', [])} | {'HQ'}
         found = players_of(token, gid, on_grid)
-        (PLAYERS / f'{gid}.json').write_text(json.dumps(found, separators=(',', ':')) + '\n')
+        (PLAYERS / f'{gid}.json').write_text(json.dumps(found, indent=1, sort_keys=True) + '\n')
         print(f'  {gid:4} {len(found):3} villages', flush=True)
 
 
