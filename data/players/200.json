@@ -223,7 +223,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -284,7 +284,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -347,8 +347,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -388,8 +388,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -823,7 +823,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -835,7 +835,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -867,7 +867,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -879,7 +879,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -891,7 +891,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -919,7 +919,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -1371,7 +1371,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -1428,7 +1428,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -1487,8 +1487,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -1528,8 +1528,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -1966,7 +1966,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -2019,7 +2019,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -2074,8 +2074,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -2111,8 +2111,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -2557,7 +2557,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -2610,7 +2610,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -2665,8 +2665,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -2706,8 +2706,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -3136,7 +3136,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -3185,7 +3185,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -3244,8 +3244,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -3281,8 +3281,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -3738,7 +3738,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -3791,7 +3791,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -3846,8 +3846,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -3887,8 +3887,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -4314,7 +4314,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -4326,7 +4326,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -4354,7 +4354,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -4366,7 +4366,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -4378,7 +4378,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -4402,7 +4402,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -5349,7 +5349,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -5398,7 +5398,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -5457,8 +5457,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -5494,8 +5494,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -5905,7 +5905,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -5962,7 +5962,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -6025,8 +6025,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -6062,8 +6062,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -6970,7 +6970,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -7027,7 +7027,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -7082,8 +7082,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -7119,8 +7119,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -7522,7 +7522,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -7575,7 +7575,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -7634,8 +7634,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -7671,8 +7671,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -8087,7 +8087,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -8099,7 +8099,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -8123,7 +8123,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -8135,7 +8135,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "personal_project",
@@ -8151,7 +8151,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -8171,7 +8171,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -11536,7 +11536,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "base": 0.1,
@@ -11552,7 +11552,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -11576,7 +11576,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -11588,7 +11588,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "personal_project",
@@ -11604,7 +11604,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -11624,7 +11624,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -12542,7 +12542,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -12554,7 +12554,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -12578,7 +12578,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -12590,7 +12590,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -12602,7 +12602,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -12622,7 +12622,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -14502,7 +14502,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "base": 0.1,
@@ -14518,7 +14518,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -14542,7 +14542,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -14554,7 +14554,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "personal_project",
@@ -14570,7 +14570,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -14590,7 +14590,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -14995,7 +14995,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -15003,7 +15003,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -15023,7 +15023,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -15031,7 +15031,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -15039,7 +15039,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -15055,7 +15055,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -15381,7 +15381,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -15393,7 +15393,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -15417,7 +15417,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "base": 0.1,
@@ -15437,7 +15437,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "personal_project",
@@ -15453,7 +15453,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -15473,7 +15473,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -17711,7 +17711,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -17723,7 +17723,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -17747,7 +17747,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "base": 0.1,
@@ -17763,7 +17763,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -17775,7 +17775,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -17795,7 +17795,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -18185,7 +18185,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -18197,7 +18197,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -18225,7 +18225,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -18237,7 +18237,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "from": "quests",
@@ -18249,7 +18249,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -18273,7 +18273,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -20190,7 +20190,7 @@
     "iron": {
      "details": [
       {
-       "bonus": 36.30000000000002,
+       "bonus": 29.100000000000026,
        "from": "terrain"
       },
       {
@@ -20223,7 +20223,7 @@
     "wood": {
      "details": [
       {
-       "bonus": 58.50000000000013,
+       "bonus": 47.8000000000001,
        "from": "terrain"
       },
       {
@@ -20270,8 +20270,8 @@
     "iron": {
      "details": [
       {
-       "base": 630,
-       "bonus": 6,
+       "base": 410,
+       "bonus": 4,
        "from": "terrain"
       },
       {
@@ -20295,8 +20295,8 @@
     "wood": {
      "details": [
       {
-       "base": 1250,
-       "bonus": 22,
+       "base": 880,
+       "bonus": 18,
        "from": "terrain"
       },
       {
@@ -20519,7 +20519,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20527,7 +20527,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -20547,7 +20547,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20555,7 +20555,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20563,7 +20563,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -20579,7 +20579,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -20833,7 +20833,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20841,7 +20841,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -20861,7 +20861,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20869,7 +20869,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -20877,7 +20877,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -20893,7 +20893,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,
@@ -21123,7 +21123,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -21131,7 +21131,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 2.400000000000001,
@@ -21151,7 +21151,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -21159,7 +21159,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       }
      ]
     },
@@ -21167,7 +21167,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 5.1999999999999975,
@@ -21183,7 +21183,7 @@
      "details": [
       {
        "from": "balance",
-       "multiplier": 1.9077504451328386
+       "multiplier": 1.9243987889381673
       },
       {
        "bonus": 10.0,

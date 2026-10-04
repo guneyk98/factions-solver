@@ -41,6 +41,7 @@ check() {
         failed=$(( failed + 1 ))
         return
     fi
+    [[ $got == [\{\[]* ]] && got=$(printf '%s' "$got" | python3 "$root/tests/indent.py")
 
     local want="$expected/$name.txt"
 

@@ -1,1 +1,518 @@
-{"production":{"wood":40.65788954,"iron":7.503727,"workers":3.244725,"soldiers":1.300075},"storage":{"wood":10022.51953,"iron":8761.61517,"workers":8380.05,"soldiers":5382},"efficiency":{"attack":1.084375,"defense":0.388625,"worker":0.15,"map":0,"projects":0},"effective":{"soldiers":{"attack":2.709843828,"defense":1.805316647},"workers":{"worker":3.73143375,"map":3.73143375,"projects":3.73143375}},"power":{"support":23,"knight":23,"guardian":23},"units":{"knight":0,"guardian":0},"market":{"tax":0.4,"wood":24.39473372,"iron":4.5022362},"global":{"production":{"wood":2.048389094,"iron":0.7151376,"workers":0.474875,"soldiers":0.5295},"storage":{"wood":0.595625,"iron":0.572648,"workers":0.2075,"soldiers":0.38}},"fromBuildings":{"base":{"wood.production":13.3375,"wood.storage":5781.25,"iron.production":4.375,"iron.storage":5071.25,"workers.production":2.2,"workers.storage":6840,"soldiers.production":0.85,"soldiers.storage":3700,"knight.production":0,"guardian.production":0,"market.tax":0.5},"shares":{"wood.production":0.15,"wood.storage":0.1,"iron.production":0.08,"iron.storage":0.12,"workers.production":0,"workers.storage":0,"soldiers.production":0,"soldiers.storage":0,"efficiency.attack":0.15,"efficiency.defense":0.15,"efficiency.worker":0,"efficiency.map":0,"efficiency.projects":0,"support.power":0,"knight.power":0,"guardian.power":0,"knight.production":0,"guardian.production":0,"market.tax":-0},"factors":{"wood.production":1.115,"wood.storage":1.11,"iron.production":1.115,"iron.storage":1.11,"workers.production":1,"workers.storage":1,"soldiers.production":1,"soldiers.storage":1,"knight.production":1,"guardian.production":1}},"tiles":{"production":{"wood":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,18.29033456,19.31916588,3.048389094,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"iron":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7.503727,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"workers":[0,0,0,0,0,0,0,0,0,1.3273875,0,0,0,0,0,0,0,1.3273875,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.58995,0,0,0,0,0,0,0,0],"soldiers":[0,0,0,0,0,0,0,0,0,0.382375,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.688275,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.229425,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},"storage":{"wood":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,319.125,414.8625,0,4900.563281,0,0,0,0,0,0,0,3590.15625,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"iron":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3145.296,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4829.99517,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"workers":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1738.8,0,0,0,6279,0,0,0,0,0,241.5,0,0,0,0,0,0,0,0],"soldiers":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,828,0,0,0,0,0,0,0,0,0,690,0,0,0,0,0,0,3588,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}},"modifiers":[{"from":"VILLAGE_CENTRE","quantity":"efficiency","rateOrCapacity":"both","values":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.3,0,0.3,0,0,0,0,0,0,0,0,0.3,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"from":"FURNACE","quantity":"efficiency","rateOrCapacity":"production","values":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"from":"GUILD_HALL","quantity":"workers","rateOrCapacity":"production","values":[0,0,0,0,0,0,0,0,0,0.2,0,0,0,0,0,0,0,0.2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"from":"GUILD_HALL","quantity":"efficiency","rateOrCapacity":"storage","values":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"from":"SAWMILL","quantity":"efficiency","rateOrCapacity":"production","values":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"from":"TOWN_HALL","quantity":"efficiency","rateOrCapacity":"both","values":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.05,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}],"cost":{"total":{"wood":103132,"iron":125207,"workers":4015},"village":{"level":30,"next":{"wood":20641192,"iron":30892430,"workers":76281},"spent":{"wood":36735981,"iron":52920897,"workers":173742}},"buildings":[{"tile":0,"level":6,"next":{"wood":0,"iron":0,"workers":0},"spent":{"wood":0,"iron":0,"workers":0}},{"tile":6,"level":4,"next":{"wood":392,"iron":160,"workers":13},"spent":{"wood":716,"iron":249,"workers":8}},{"tile":7,"level":4,"next":{"wood":4710,"iron":4282,"workers":171},"spent":{"wood":8612,"iron":6681,"workers":236}},{"tile":9,"level":5,"next":{"wood":966,"iron":1424,"workers":133},"spent":{"wood":1941,"iron":2396,"workers":194}},{"tile":17,"level":5,"next":{"wood":828,"iron":814,"workers":111},"spent":{"wood":1664,"iron":1369,"workers":110}},{"tile":35,"level":5,"next":{"wood":1105,"iron":569,"workers":55},"spent":{"wood":2219,"iron":957,"workers":81}},{"tile":36,"level":7,"next":{"wood":437,"iron":188,"workers":0},"spent":{"wood":975,"iron":330,"workers":0}},{"tile":48,"level":4,"next":{"wood":3925,"iron":3211,"workers":102},"spent":{"wood":7176,"iron":5011,"workers":141}},{"tile":57,"level":6,"next":{"wood":777,"iron":1857,"workers":143},"spent":{"wood":1660,"iron":3275,"workers":175}},{"tile":58,"level":5,"next":{"wood":4420,"iron":11398,"workers":222},"spent":{"wood":8881,"iron":19186,"workers":325}},{"tile":65,"level":6,"next":{"wood":0,"iron":0,"workers":0},"spent":{"wood":0,"iron":0,"workers":0}},{"tile":66,"level":5,"next":{"wood":5525,"iron":4884,"workers":166},"spent":{"wood":11101,"iron":8222,"workers":243}},{"tile":68,"level":6,"next":{"wood":3888,"iron":4953,"workers":143},"spent":{"wood":8311,"iron":8737,"workers":175}},{"tile":71,"level":4,"next":{"wood":1373,"iron":1070,"workers":68},"spent":{"wood":2511,"iron":1669,"workers":94}},{"tile":73,"level":8,"next":{"wood":616,"iron":0,"workers":23},"spent":{"wood":1412,"iron":0,"workers":0}},{"tile":74,"level":6,"next":{"wood":311,"iron":0,"workers":0},"spent":{"wood":664,"iron":0,"workers":0}},{"tile":76,"level":3,"next":{"wood":836,"iron":703,"workers":42},"spent":{"wood":1316,"iron":966,"workers":0}},{"tile":78,"level":3,"next":{"wood":278,"iron":527,"workers":33},"spent":{"wood":438,"iron":725,"workers":0}},{"tile":81,"level":5,"next":{"wood":2762,"iron":3256,"workers":88},"spent":{"wood":5549,"iron":5481,"workers":87}},{"tile":82,"level":3,"next":{"wood":3346,"iron":2815,"workers":106},"spent":{"wood":5266,"iron":3866,"workers":130}},{"tile":84,"level":5,"next":{"wood":1105,"iron":569,"workers":55},"spent":{"wood":2219,"iron":957,"workers":81}},{"tile":85,"level":4,"next":{"wood":1962,"iron":2676,"workers":137},"spent":{"wood":3587,"iron":4175,"workers":188}},{"tile":86,"level":4,"next":{"wood":14131,"iron":32115,"workers":1235},"spent":{"wood":25838,"iron":50121,"workers":1705}},{"tile":91,"level":4,"next":{"wood":588,"iron":535,"workers":68},"spent":{"wood":1076,"iron":834,"workers":42}}]}}
+{
+ "production": {
+  "wood": 38.07933024,
+  "iron": 6.561555,
+  "workers": 2.654775,
+  "soldiers": 1.4912625
+ },
+ "storage": {
+  "wood": 8722.300781,
+  "iron": 8409.119125,
+  "workers": 8138.55,
+  "soldiers": 5382
+ },
+ "efficiency": {
+  "attack": 1.0125,
+  "defense": 0.32825,
+  "worker": 0.15,
+  "map": 0.12,
+  "projects": 0
+ },
+ "effective": {
+  "soldiers": {
+   "attack": 3.001165781,
+   "defense": 1.980769416
+  },
+  "workers": {
+   "worker": 3.05299125,
+   "map": 3.4193502,
+   "projects": 3.05299125
+  }
+ },
+ "power": {
+  "support": 23,
+  "knight": 23,
+  "guardian": 23
+ },
+ "units": {
+  "knight": 0,
+  "guardian": 0
+ },
+ "market": {
+  "tax": 0.34,
+  "wood": 25.13235796,
+  "iron": 4.3306263
+ },
+ "global": {
+  "production": {
+   "wood": 1.855057563,
+   "iron": 0.499784,
+   "workers": 0.474875,
+   "soldiers": 0.5295
+  },
+  "storage": {
+   "wood": 0.388625,
+   "iron": 0.3409,
+   "workers": 0.2075,
+   "soldiers": 0.38
+  }
+ },
+ "fromBuildings": {
+  "base": {
+   "wood.production": 13.3375,
+   "wood.storage": 5781.25,
+   "iron.production": 4.375,
+   "iron.storage": 5771.25,
+   "workers.production": 1.8,
+   "workers.storage": 6640,
+   "soldiers.production": 0.975,
+   "soldiers.storage": 3700,
+   "knight.production": 0,
+   "guardian.production": 0,
+   "market.tax": 0.5
+  },
+  "shares": {
+   "wood.production": 0.1,
+   "wood.storage": 0,
+   "iron.production": 0,
+   "iron.storage": 0,
+   "workers.production": 0,
+   "workers.storage": 0,
+   "soldiers.production": 0,
+   "soldiers.storage": 0,
+   "efficiency.attack": 0.1,
+   "efficiency.defense": 0.1,
+   "efficiency.worker": 0,
+   "efficiency.map": 0.12,
+   "efficiency.projects": 0,
+   "support.power": 0,
+   "knight.power": 0,
+   "guardian.power": 0,
+   "knight.production": 0,
+   "guardian.production": 0,
+   "market.tax": -0.06
+  },
+  "factors": {
+   "wood.production": 1.075,
+   "wood.storage": 1.05,
+   "iron.production": 1.04,
+   "iron.storage": 1.06,
+   "workers.production": 1,
+   "workers.storage": 1,
+   "soldiers.production": 1,
+   "soldiers.storage": 1,
+   "knight.production": 1,
+   "guardian.production": 1
+  }
+ },
+ "tiles": {
+  "production": {
+   "wood": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17.13034538, 18.0939273, 2.855057563, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+   "iron": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6.561555, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+   "workers": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.884925, 0, 0, 0, 0, 0, 0, 0, 0.884925, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.884925, 0, 0, 0, 0, 0, 0, 0, 0],
+   "soldiers": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5735625, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.688275, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.229425, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  "storage": {
+   "wood": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 277.725, 361.0425, 0, 4264.814531, 0, 0, 0, 0, 0, 0, 0, 3124.40625, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+   "iron": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2681.8, 938.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4118.239125, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+   "workers": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1738.8, 0, 0, 0, 6279, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+   "soldiers": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 828, 0, 0, 0, 0, 0, 0, 0, 0, 0, 690, 0, 0, 0, 0, 0, 0, 3588, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+ },
+ "modifiers": [
+  {
+   "from": "VILLAGE_CENTRE",
+   "quantity": "efficiency",
+   "rateOrCapacity": "both",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "from": "FURNACE",
+   "quantity": "efficiency",
+   "rateOrCapacity": "production",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "from": "GUILD_HALL",
+   "quantity": "workers",
+   "rateOrCapacity": "production",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "from": "GUILD_HALL",
+   "quantity": "efficiency",
+   "rateOrCapacity": "storage",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "from": "SAWMILL",
+   "quantity": "efficiency",
+   "rateOrCapacity": "production",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  {
+   "from": "TOWN_HALL",
+   "quantity": "efficiency",
+   "rateOrCapacity": "both",
+   "values": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+ ],
+ "cost": {
+  "total": {
+   "wood": 293849,
+   "iron": 133129,
+   "workers": 5292
+  },
+  "village": {
+   "level": 30,
+   "next": {
+    "wood": 267196,
+    "iron": 599925,
+    "workers": 454218
+   },
+   "spent": {
+    "wood": 775545,
+    "iron": 1568363,
+    "workers": 856796
+   }
+  },
+  "buildings": [
+   {
+    "tile": 0,
+    "level": 6,
+    "next": {
+     "wood": 76273,
+     "iron": 14282,
+     "workers": 866
+    },
+    "spent": {
+     "wood": 88982,
+     "iron": 31677,
+     "workers": 1339
+    }
+   },
+   {
+    "tile": 6,
+    "level": 4,
+    "next": {
+     "wood": 1132,
+     "iron": 111,
+     "workers": 13
+    },
+    "spent": {
+     "wood": 1236,
+     "iron": 208,
+     "workers": 8
+    }
+   },
+   {
+    "tile": 7,
+    "level": 4,
+    "next": {
+     "wood": 13595,
+     "iron": 2966,
+     "workers": 167
+    },
+    "spent": {
+     "wood": 14850,
+     "iron": 5587,
+     "workers": 233
+    }
+   },
+   {
+    "tile": 9,
+    "level": 5,
+    "next": {
+     "wood": 3637,
+     "iron": 900,
+     "workers": 129
+    },
+    "spent": {
+     "wood": 4147,
+     "iron": 1868,
+     "workers": 191
+    }
+   },
+   {
+    "tile": 17,
+    "level": 5,
+    "next": {
+     "wood": 3117,
+     "iron": 514,
+     "workers": 107
+    },
+    "spent": {
+     "wood": 3554,
+     "iron": 1067,
+     "workers": 107
+    }
+   },
+   {
+    "tile": 35,
+    "level": 5,
+    "next": {
+     "wood": 4157,
+     "iron": 360,
+     "workers": 53
+    },
+    "spent": {
+     "wood": 4739,
+     "iron": 747,
+     "workers": 78
+    }
+   },
+   {
+    "tile": 36,
+    "level": 7,
+    "next": {
+     "wood": 2798,
+     "iron": 99,
+     "workers": 0
+    },
+    "spent": {
+     "wood": 3303,
+     "iron": 217,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 48,
+    "level": 4,
+    "next": {
+     "wood": 11329,
+     "iron": 2224,
+     "workers": 100
+    },
+    "spent": {
+     "wood": 12374,
+     "iron": 4190,
+     "workers": 139
+    }
+   },
+   {
+    "tile": 57,
+    "level": 6,
+    "next": {
+     "wood": 3813,
+     "iron": 1071,
+     "workers": 138
+    },
+    "spent": {
+     "wood": 4446,
+     "iron": 2373,
+     "workers": 172
+    }
+   },
+   {
+    "tile": 58,
+    "level": 5,
+    "next": {
+     "wood": 16629,
+     "iron": 7204,
+     "workers": 215
+    },
+    "spent": {
+     "wood": 18962,
+     "iron": 14969,
+     "workers": 319
+    }
+   },
+   {
+    "tile": 65,
+    "level": 6,
+    "next": {
+     "wood": 0,
+     "iron": 0,
+     "workers": 0
+    },
+    "spent": {
+     "wood": 0,
+     "iron": 0,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 66,
+    "level": 5,
+    "next": {
+     "wood": 20786,
+     "iron": 3087,
+     "workers": 161
+    },
+    "spent": {
+     "wood": 23703,
+     "iron": 6414,
+     "workers": 239
+    }
+   },
+   {
+    "tile": 68,
+    "level": 6,
+    "next": {
+     "wood": 19068,
+     "iron": 2856,
+     "workers": 138
+    },
+    "spent": {
+     "wood": 22243,
+     "iron": 6334,
+     "workers": 172
+    }
+   },
+   {
+    "tile": 71,
+    "level": 4,
+    "next": {
+     "wood": 3965,
+     "iron": 741,
+     "workers": 66
+    },
+    "spent": {
+     "wood": 4331,
+     "iron": 1396,
+     "workers": 92
+    }
+   },
+   {
+    "tile": 73,
+    "level": 8,
+    "next": {
+     "wood": 5134,
+     "iron": 0,
+     "workers": 22
+    },
+    "spent": {
+     "wood": 6101,
+     "iron": 0,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 74,
+    "level": 6,
+    "next": {
+     "wood": 1525,
+     "iron": 0,
+     "workers": 0
+    },
+    "spent": {
+     "wood": 1778,
+     "iron": 0,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 76,
+    "level": 3,
+    "next": {
+     "wood": 1852,
+     "iron": 534,
+     "workers": 41
+    },
+    "spent": {
+     "wood": 1859,
+     "iron": 862,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 78,
+    "level": 3,
+    "next": {
+     "wood": 617,
+     "iron": 400,
+     "workers": 33
+    },
+    "spent": {
+     "wood": 619,
+     "iron": 646,
+     "workers": 0
+    }
+   },
+   {
+    "tile": 81,
+    "level": 5,
+    "next": {
+     "wood": 10393,
+     "iron": 2058,
+     "workers": 86
+    },
+    "spent": {
+     "wood": 11850,
+     "iron": 4276,
+     "workers": 86
+    }
+   },
+   {
+    "tile": 82,
+    "level": 3,
+    "next": {
+     "wood": 7410,
+     "iron": 2137,
+     "workers": 104
+    },
+    "spent": {
+     "wood": 7440,
+     "iron": 3450,
+     "workers": 129
+    }
+   },
+   {
+    "tile": 84,
+    "level": 5,
+    "next": {
+     "wood": 4157,
+     "iron": 360,
+     "workers": 53
+    },
+    "spent": {
+     "wood": 4739,
+     "iron": 747,
+     "workers": 78
+    }
+   },
+   {
+    "tile": 85,
+    "level": 4,
+    "next": {
+     "wood": 5664,
+     "iron": 1854,
+     "workers": 133
+    },
+    "spent": {
+     "wood": 6186,
+     "iron": 3491,
+     "workers": 186
+    }
+   },
+   {
+    "tile": 86,
+    "level": 4,
+    "next": {
+     "wood": 40787,
+     "iron": 22249,
+     "workers": 1205
+    },
+    "spent": {
+     "wood": 44552,
+     "iron": 41913,
+     "workers": 1683
+    }
+   },
+   {
+    "tile": 91,
+    "level": 4,
+    "next": {
+     "wood": 1699,
+     "iron": 370,
+     "workers": 66
+    },
+    "spent": {
+     "wood": 1855,
+     "iron": 697,
+     "workers": 41
+    }
+   }
+  ]
+ }
+}

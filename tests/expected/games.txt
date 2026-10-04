@@ -1,18 +1,8 @@
+ 208 RIVERS           10x10 24 buildings, 67 effects, 1 unmodelled
+       RECYCLING_WORKSHOP.recycling
+ 200 FORGOTTEN_WEALD  10x10 24 buildings, 65 effects, 1 unmodelled
+       RECYCLING_WORKSHOP.recycling
  187 ALPINE           10x10 22 buildings, 64 effects, 1 unmodelled
        RECYCLING_WORKSHOP.recycling
  168 FORGOTTEN_WEALD  10x10 24 buildings, 68 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
- 139 VOLBADIHR        10x10 24 buildings, 70 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
- 122 ALPINE           10x10 24 buildings, 70 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
-  77 ALPINE           10x10 24 buildings, 68 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
-  52 SMALLWORLD       10x10 24 buildings, 70 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
-  50 NECROPOLIS       10x10 24 buildings, 70 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
-  49 FORGOTTEN_WEALD  10x10 24 buildings, 57 effects, 1 unmodelled
-       RECYCLING_WORKSHOP.recycling
-  48 WETLANDS         10x10 24 buildings, 56 effects, 1 unmodelled
        RECYCLING_WORKSHOP.recycling
