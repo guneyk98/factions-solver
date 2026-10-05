@@ -1041,7 +1041,7 @@
  "map": "RIVERS",
  "marketTax": 50.0,
  "resourceMultiplier": 1,
- "seasonNow": 4,
+ "seasonNow": -1,
  "seasons": [
   {
    "end": "2026-10-03T18:00:00+00:00",
@@ -1072,19 +1072,9 @@
    "end": "2026-10-05T00:00:00+00:00",
    "start": "2026-10-04T18:00:00+00:00",
    "type": "SUMMER"
-  },
-  {
-   "end": "2026-10-05T06:00:00+00:00",
-   "start": "2026-10-05T00:00:00+00:00",
-   "type": "SPRING"
-  },
-  {
-   "end": "2026-10-05T12:00:00+00:00",
-   "start": "2026-10-05T06:00:00+00:00",
-   "type": "WINTER"
   }
  ],
- "status": "PLAYING",
+ "status": "COMPLETED",
  "storageMultiplier": 1,
  "terrain": [
   [
